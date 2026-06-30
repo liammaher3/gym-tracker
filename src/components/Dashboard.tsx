@@ -8,6 +8,7 @@ type Props = {
   userId: string
 }
 
+
 export default function Dashboard({ userId }: Props) {
   const [workouts, setWorkouts] = useState<Workout[]>([])
   const [loading, setLoading] = useState(true)
