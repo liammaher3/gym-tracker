@@ -33,7 +33,7 @@ export default function Dashboard({ userId }: Props) {
     load()
     }, [userId])
 
-  if (loading) return <p className="text-gray-500">Loading workouts...</p>
+  if (loading) return <p className="text-gray-500 dark:text-gray-400">Loading workouts...</p>
 
   if (logging) return (
     <WorkoutLogger
@@ -50,33 +50,34 @@ export default function Dashboard({ userId }: Props) {
     />
   )
 
-
-
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold text-gray-700">Your Workouts</h2>
+        <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200">Your Workouts</h2>
         <button
           onClick={() => setLogging(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm"
+          className="bg-blue-600 dark:bg-blue-800 text-white px-4 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 text-sm"
         >
           + New Workout
         </button>
       </div>
 
       {workouts.length === 0 ? ( 
-        <p className="text-gray-400 text-center mt-20">No workouts yet. Start one!</p>
+        <p className="text-gray-400 dark:text-gray-500 text-center mt-20">No workouts yet. Start one!</p>
       ) : ( 
         <ul className="space-y-3">
           {workouts.map((workout) => (
-            <li key={workout.id} className="bg-white rounded-xl p-4 shadow-sm flex justify-between items-center">
+            <li 
+                key={workout.id} 
+                className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm flex justify-between items-center"
+            >
               <div>
-                <p className="font-medium text-gray-800">{workout.name ?? 'Untitled Workout'}</p>
-                <p className="text-sm text-gray-400">{new Date(workout.created_at).toLocaleDateString()}</p>
+                <p className="font-medium text-gray-800 dark:text-gray-100">{workout.name ?? 'Untitled Workout'}</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500">{new Date(workout.created_at).toLocaleDateString()}</p>
               </div>
               <button 
               onClick={() => setViewingWorkout(workout)}
-              className="text-sm text-blue-500 hover:text-blue-700">View →</button>
+              className="text-sm text-blue-500 dark:text-blue-800 hover:text-blue-700 dark:hover:text-blue-300">View →</button>
             </li>
           ))}
         </ul>

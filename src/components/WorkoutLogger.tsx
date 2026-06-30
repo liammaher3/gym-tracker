@@ -5,7 +5,7 @@ import type { Exercise, WorkoutSet } from '../types'
 type Props = {
   userId: string
   onFinish: () => void
-  onBack: () => void 
+  onBack: () => void
 }
 
 type ExerciseWithSets = Exercise & { sets: WorkoutSet[] }
@@ -83,27 +83,29 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
       )
     )
     setSavingSet(false)
-    // weight carries over to the next set by default, reps resets are up to you — keeping both as-is
   }
 
   if (!workoutId) {
     return (
-      <div className="bg-white rounded-xl p-6 shadow-sm">
-        <button onClick={onBack} className="text-sm text-gray-400 hover:text-gray-600 mb-4">
-        Back to workouts
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+        <button
+          onClick={onBack}
+          className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 mb-4"
+        >
+          ← Back to workouts
         </button>
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">Start New Workout</h2>
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Start New Workout</h2>
         <input
           type="text"
           placeholder="Workout name (optional)"
           value={workoutName}
           onChange={(e) => setWorkoutName(e.target.value)}
-          className="w-full border border-gray-200 rounded-lg px-4 py-2 mb-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 rounded-lg px-4 py-2 mb-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <button
           onClick={startWorkout}
           disabled={starting}
-          className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 text-sm"
+          className="w-full bg-blue-600 dark:bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 text-sm"
         >
           {starting ? 'Starting...' : 'Start Workout'}
         </button>
@@ -114,11 +116,11 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
   const activeExercise = exercises.find((e) => e.id === activeExerciseId)
 
   return (
-    <div className="bg-white rounded-xl p-6 shadow-sm">
-      <h2 className="text-lg font-semibold text-gray-800 mb-1">
+    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+      <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">
         {workoutName || 'Untitled Workout'}
       </h2>
-      <p className="text-sm text-gray-400 mb-6">Add exercises and sets below</p>
+      <p className="text-sm text-gray-400 dark:text-gray-500 mb-6">Add exercises and sets below</p>
 
       {/* Completed exercises with their sets */}
       {exercises.map((ex) => (
@@ -126,7 +128,9 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
           <button
             onClick={() => setActiveExerciseId(ex.id)}
             className={`w-full text-left font-medium px-4 py-2 rounded-lg mb-1 ${
-              ex.id === activeExerciseId ? 'bg-blue-50 text-blue-700' : 'bg-gray-50 text-gray-700'
+              ex.id === activeExerciseId
+                ? 'bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200'
             }`}
           >
             {ex.name}
@@ -134,7 +138,7 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
           {ex.sets.length > 0 && (
             <ul className="space-y-1 pl-2">
               {ex.sets.map((s) => (
-                <li key={s.id} className="flex justify-between text-sm text-gray-500 px-2">
+                <li key={s.id} className="flex justify-between text-sm text-gray-500 dark:text-gray-400 px-2">
                   <span>Set {s.set_number}</span>
                   <span>{s.reps} reps @ {s.weight}lbs</span>
                 </li>
@@ -146,36 +150,36 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
 
       {/* Set logger for the active exercise */}
       {activeExercise && (
-        <div className="bg-gray-50 rounded-lg p-4 mb-6">
-          <p className="text-sm font-medium text-gray-600 mb-3">
+        <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6">
+          <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-3">
             Logging set {activeExercise.sets.length + 1} for {activeExercise.name}
           </p>
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div>
-              <label className="text-xs text-gray-400 mb-1 block">Reps</label>
+              <label className="text-xs text-gray-400 dark:text-gray-500 mb-1 block">Reps</label>
               <input
                 type="number"
                 value={setForm.reps}
                 onChange={(e) => setSetForm({ ...setForm, reps: Number(e.target.value) })}
                 onFocus={(e) => e.target.select()}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
-              <label className="text-xs text-gray-400 mb-1 block">Weight (lbs)</label>
+              <label className="text-xs text-gray-400 dark:text-gray-500 mb-1 block">Weight (lbs)</label>
               <input
                 type="number"
                 value={setForm.weight}
                 onChange={(e) => setSetForm({ ...setForm, weight: Number(e.target.value) })}
                 onFocus={(e) => e.target.select()}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
           <button
             onClick={addSet}
             disabled={savingSet}
-            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 text-sm disabled:opacity-50"
+            className="w-full bg-blue-600 dark:bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 text-sm disabled:opacity-50"
           >
             {savingSet ? 'Adding...' : '+ Add Set'}
           </button>
@@ -183,18 +187,18 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
       )}
 
       {/* Add new exercise */}
-      <div className="space-y-3 border-t border-gray-100 pt-4">
+      <div className="space-y-3 border-t border-gray-100 dark:border-gray-700 pt-4">
         <input
           type="text"
           placeholder="New exercise name (e.g. Bench Press)"
           value={exerciseNameInput}
           onChange={(e) => setExerciseNameInput(e.target.value)}
-          className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <button
           onClick={addExercise}
           disabled={savingExercise || !exerciseNameInput}
-          className="w-full bg-gray-700 text-white py-2 rounded-lg hover:bg-gray-800 text-sm disabled:opacity-50"
+          className="w-full bg-gray-700 dark:bg-gray-600 text-white py-2 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-500 text-sm disabled:opacity-50"
         >
           {savingExercise ? 'Adding...' : '+ Add Exercise'}
         </button>
@@ -202,7 +206,7 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
 
       <button
         onClick={onFinish}
-        className="w-full mt-6 text-sm text-gray-400 hover:text-gray-600"
+        className="w-full mt-6 text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
       >
         Finish Workout
       </button>

@@ -54,38 +54,41 @@ export default function WorkoutViewer({ workout, onBack }: Props) {
   }, [workout.id])
 
   return (
-    <div className="bg-white rounded-xl p-6 shadow-sm">
-      <button onClick={onBack} className="text-sm text-gray-400 hover:text-gray-600 mb-4">
+    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+      <button
+        onClick={onBack}
+        className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 mb-4"
+      >
         ← Back to workouts
       </button>
 
-      <h2 className="text-lg font-semibold text-gray-800 mb-1">
+      <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">
         {workout.name ?? 'Untitled Workout'}
       </h2>
-      <p className="text-sm text-gray-400 mb-6">
+      <p className="text-sm text-gray-400 dark:text-gray-500 mb-6">
         {new Date(workout.created_at).toLocaleDateString()}
       </p>
 
       {loading ? (
-        <p className="text-gray-500">Loading exercises...</p>
+        <p className="text-gray-500 dark:text-gray-400">Loading exercises...</p>
       ) : exercises.length === 0 ? (
-        <p className="text-gray-400">No exercises logged for this workout.</p>
+        <p className="text-gray-400 dark:text-gray-500">No exercises logged for this workout.</p>
       ) : (
         <div className="space-y-5">
           {exercises.map((ex) => (
             <div key={ex.id}>
-              <p className="font-medium text-gray-800 mb-2">{ex.name}</p>
+              <p className="font-medium text-gray-800 dark:text-gray-100 mb-2">{ex.name}</p>
               {ex.sets.length === 0 ? (
-                <p className="text-sm text-gray-400 pl-2">No sets logged.</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 pl-2">No sets logged.</p>
               ) : (
                 <ul className="space-y-1">
                   {ex.sets.map((s) => (
                     <li
                       key={s.id}
-                      className="flex justify-between text-sm text-gray-700 bg-gray-50 rounded-lg px-4 py-2"
+                      className="flex justify-between text-sm text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-700 rounded-lg px-4 py-2"
                     >
                       <span>Set {s.set_number}</span>
-                      <span className="text-gray-400">{s.reps} reps @ {s.weight}lbs</span>
+                      <span className="text-gray-400 dark:text-gray-500">{s.reps} reps @ {s.weight}lbs</span>
                     </li>
                   ))}
                 </ul>
@@ -97,3 +100,4 @@ export default function WorkoutViewer({ workout, onBack }: Props) {
     </div>
   )
 }
+
