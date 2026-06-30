@@ -39,6 +39,7 @@ export default function Dashboard({ userId }: Props) {
     <WorkoutLogger
       userId={userId}
       onFinish={() => { setLogging(false); fetchWorkouts() }}
+      onBack={() => setLogging(false)}
     />
   )
 

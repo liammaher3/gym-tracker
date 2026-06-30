@@ -5,11 +5,12 @@ import type { Exercise, WorkoutSet } from '../types'
 type Props = {
   userId: string
   onFinish: () => void
+  onBack: () => void 
 }
 
 type ExerciseWithSets = Exercise & { sets: WorkoutSet[] }
 
-export default function WorkoutLogger({ userId, onFinish }: Props) {
+export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
   const [workoutId, setWorkoutId] = useState<string | null>(null)
   const [workoutName, setWorkoutName] = useState('')
   const [starting, setStarting] = useState(false)
@@ -88,6 +89,9 @@ export default function WorkoutLogger({ userId, onFinish }: Props) {
   if (!workoutId) {
     return (
       <div className="bg-white rounded-xl p-6 shadow-sm">
+        <button onClick={onBack} className="text-sm text-gray-400 hover:text-gray-600 mb-4">
+        Back to workouts
+        </button>
         <h2 className="text-lg font-semibold text-gray-800 mb-4">Start New Workout</h2>
         <input
           type="text"
