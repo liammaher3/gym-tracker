@@ -1,0 +1,208 @@
+import { useState } from 'react'
+import { supabase } from '../lib/supabaseClient'
+import type { Exercise, WorkoutSet } from '../types'
+
+type Props = {
+  userId: string
+  onFinish: () => void
+}
+
+type ExerciseWithSets = Exercise & { sets: WorkoutSet[] }
+
+export default function WorkoutLogger({ userId, onFinish }: Props) {
+  const [workoutId, setWorkoutId] = useState<string | null>(null)
+  const [workoutName, setWorkoutName] = useState('')
+  const [starting, setStarting] = useState(false)
+
+  const [exercises, setExercises] = useState<ExerciseWithSets[]>([])
+  const [exerciseNameInput, setExerciseNameInput] = useState('')
+  const [activeExerciseId, setActiveExerciseId] = useState<string | null>(null)
+
+  const [setForm, setSetForm] = useState({ reps: 10, weight: 0 })
+  const [savingSet, setSavingSet] = useState(false)
+  const [savingExercise, setSavingExercise] = useState(false)
+
+  const startWorkout = async () => {
+    setStarting(true)
+    const { data, error } = await supabase
+      .from('workouts')
+      .insert({ user_id: userId, name: workoutName || null })
+      .select()
+      .single()
+
+    if (error) { console.error(error); setStarting(false); return }
+    setWorkoutId(data.id)
+    setStarting(false)
+  }
+
+  const addExercise = async () => {
+    if (!workoutId || !exerciseNameInput) return
+    setSavingExercise(true)
+
+    const { data, error } = await supabase
+      .from('exercises')
+      .insert({ workout_id: workoutId, name: exerciseNameInput })
+      .select()
+      .single()
+
+    if (error) { console.error(error); setSavingExercise(false); return }
+
+    const newExercise: ExerciseWithSets = { ...data, sets: [] }
+    setExercises([...exercises, newExercise])
+    setActiveExerciseId(newExercise.id)
+    setExerciseNameInput('')
+    setSetForm({ reps: 10, weight: 0 })
+    setSavingExercise(false)
+  }
+
+  const addSet = async () => {
+    if (!activeExerciseId) return
+    const exercise = exercises.find((e) => e.id === activeExerciseId)
+    if (!exercise) return
+
+    setSavingSet(true)
+    const nextSetNumber = exercise.sets.length + 1
+
+    const { data, error } = await supabase
+      .from('sets')
+      .insert({
+        exercise_id: activeExerciseId,
+        set_number: nextSetNumber,
+        reps: setForm.reps,
+        weight: setForm.weight,
+      })
+      .select()
+      .single()
+
+    if (error) { console.error(error); setSavingSet(false); return }
+
+    setExercises(
+      exercises.map((e) =>
+        e.id === activeExerciseId ? { ...e, sets: [...e.sets, data] } : e
+      )
+    )
+    setSavingSet(false)
+    // weight carries over to the next set by default, reps resets are up to you — keeping both as-is
+  }
+
+  if (!workoutId) {
+    return (
+      <div className="bg-white rounded-xl p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">Start New Workout</h2>
+        <input
+          type="text"
+          placeholder="Workout name (optional)"
+          value={workoutName}
+          onChange={(e) => setWorkoutName(e.target.value)}
+          className="w-full border border-gray-200 rounded-lg px-4 py-2 mb-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <button
+          onClick={startWorkout}
+          disabled={starting}
+          className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 text-sm"
+        >
+          {starting ? 'Starting...' : 'Start Workout'}
+        </button>
+      </div>
+    )
+  }
+
+  const activeExercise = exercises.find((e) => e.id === activeExerciseId)
+
+  return (
+    <div className="bg-white rounded-xl p-6 shadow-sm">
+      <h2 className="text-lg font-semibold text-gray-800 mb-1">
+        {workoutName || 'Untitled Workout'}
+      </h2>
+      <p className="text-sm text-gray-400 mb-6">Add exercises and sets below</p>
+
+      {/* Completed exercises with their sets */}
+      {exercises.map((ex) => (
+        <div key={ex.id} className="mb-4">
+          <button
+            onClick={() => setActiveExerciseId(ex.id)}
+            className={`w-full text-left font-medium px-4 py-2 rounded-lg mb-1 ${
+              ex.id === activeExerciseId ? 'bg-blue-50 text-blue-700' : 'bg-gray-50 text-gray-700'
+            }`}
+          >
+            {ex.name}
+          </button>
+          {ex.sets.length > 0 && (
+            <ul className="space-y-1 pl-2">
+              {ex.sets.map((s) => (
+                <li key={s.id} className="flex justify-between text-sm text-gray-500 px-2">
+                  <span>Set {s.set_number}</span>
+                  <span>{s.reps} reps @ {s.weight}lbs</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ))}
+
+      {/* Set logger for the active exercise */}
+      {activeExercise && (
+        <div className="bg-gray-50 rounded-lg p-4 mb-6">
+          <p className="text-sm font-medium text-gray-600 mb-3">
+            Logging set {activeExercise.sets.length + 1} for {activeExercise.name}
+          </p>
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label className="text-xs text-gray-400 mb-1 block">Reps</label>
+              <input
+                type="number"
+                value={setForm.reps}
+                onChange={(e) => setSetForm({ ...setForm, reps: Number(e.target.value) })}
+                onFocus={(e) => e.target.select()}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-400 mb-1 block">Weight (lbs)</label>
+              <input
+                type="number"
+                value={setForm.weight}
+                onChange={(e) => setSetForm({ ...setForm, weight: Number(e.target.value) })}
+                onFocus={(e) => e.target.select()}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+          <button
+            onClick={addSet}
+            disabled={savingSet}
+            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 text-sm disabled:opacity-50"
+          >
+            {savingSet ? 'Adding...' : '+ Add Set'}
+          </button>
+        </div>
+      )}
+
+      {/* Add new exercise */}
+      <div className="space-y-3 border-t border-gray-100 pt-4">
+        <input
+          type="text"
+          placeholder="New exercise name (e.g. Bench Press)"
+          value={exerciseNameInput}
+          onChange={(e) => setExerciseNameInput(e.target.value)}
+          className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <button
+          onClick={addExercise}
+          disabled={savingExercise || !exerciseNameInput}
+          className="w-full bg-gray-700 text-white py-2 rounded-lg hover:bg-gray-800 text-sm disabled:opacity-50"
+        >
+          {savingExercise ? 'Adding...' : '+ Add Exercise'}
+        </button>
+      </div>
+
+      <button
+        onClick={onFinish}
+        className="w-full mt-6 text-sm text-gray-400 hover:text-gray-600"
+      >
+        Finish Workout
+      </button>
+    </div>
+  )
+}
+
