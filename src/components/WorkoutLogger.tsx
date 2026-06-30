@@ -213,4 +213,3 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
     </div>
   )
 }
-

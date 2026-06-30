@@ -2,18 +2,18 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import type { Workout } from '../types'
 import WorkoutLogger from './WorkoutLogger'
-import WorkoutViewer from './WorkoutViewer' 
+import WorkoutViewer from './WorkoutViewer'
 
 type Props = {
   userId: string
 }
-
 
 export default function Dashboard({ userId }: Props) {
   const [workouts, setWorkouts] = useState<Workout[]>([])
   const [loading, setLoading] = useState(true)
   const [logging, setLogging] = useState(false)
   const [viewingWorkout, setViewingWorkout] = useState<Workout | null>(null)
+
   const fetchWorkouts = async () => {
     const { data, error } = await supabase
       .from('workouts')
@@ -26,12 +26,12 @@ export default function Dashboard({ userId }: Props) {
     setLoading(false)
   }
 
-    useEffect(() => {
+  useEffect(() => {
     const load = async () => {
-        await fetchWorkouts()
+      await fetchWorkouts()
     }
     load()
-    }, [userId])
+  }, [userId])
 
   if (loading) return <p className="text-gray-500 dark:text-gray-400">Loading workouts...</p>
 
@@ -45,8 +45,8 @@ export default function Dashboard({ userId }: Props) {
 
   if (viewingWorkout) return (
     <WorkoutViewer
-    workout={viewingWorkout}
-    onBack={() => setViewingWorkout(null)}
+      workout={viewingWorkout}
+      onBack={() => setViewingWorkout(null)}
     />
   )
 
@@ -62,22 +62,25 @@ export default function Dashboard({ userId }: Props) {
         </button>
       </div>
 
-      {workouts.length === 0 ? ( 
+      {workouts.length === 0 ? (
         <p className="text-gray-400 dark:text-gray-500 text-center mt-20">No workouts yet. Start one!</p>
-      ) : ( 
+      ) : (
         <ul className="space-y-3">
           {workouts.map((workout) => (
-            <li 
-                key={workout.id} 
-                className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm flex justify-between items-center"
+            <li
+              key={workout.id}
+              className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm flex justify-between items-center"
             >
               <div>
                 <p className="font-medium text-gray-800 dark:text-gray-100">{workout.name ?? 'Untitled Workout'}</p>
                 <p className="text-sm text-gray-400 dark:text-gray-500">{new Date(workout.created_at).toLocaleDateString()}</p>
               </div>
-              <button 
-              onClick={() => setViewingWorkout(workout)}
-              className="text-sm text-blue-500 dark:text-blue-800 hover:text-blue-700 dark:hover:text-blue-300">View →</button>
+              <button
+                onClick={() => setViewingWorkout(workout)}
+                className="text-sm text-blue-500 dark:text-blue-800 hover:text-blue-700 dark:hover:text-blue-300"
+              >
+                View →
+              </button>
             </li>
           ))}
         </ul>
