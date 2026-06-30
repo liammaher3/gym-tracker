@@ -46,7 +46,10 @@ export default function Dashboard({ userId }: Props) {
   if (viewingWorkout) return (
     <WorkoutViewer
       workout={viewingWorkout}
-      onBack={() => setViewingWorkout(null)}
+      onBack={() => {
+        setViewingWorkout(null)
+        fetchWorkouts()
+      }}
     />
   )
 

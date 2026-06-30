@@ -7,6 +7,8 @@ type Props = {
   onBack: () => void
 }
 
+
+
 type ExerciseWithSets = Exercise & { sets: WorkoutSet[] }
 
 export default function WorkoutViewer({ workout, onBack }: Props) {
@@ -53,15 +55,33 @@ export default function WorkoutViewer({ workout, onBack }: Props) {
     fetchExercisesAndSets()
   }, [workout.id])
 
+  async function deleteWorkout(workoutId: string) {
+    const { error } = await supabase
+    .from('workouts')
+    .delete()
+    .eq('id', workoutId)
+
+    if (error) { console.error(error); return }
+    onBack()
+  }
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-      <button
-        onClick={onBack}
-        className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 mb-4"
-      >
-        ← Back to workouts
-      </button>
+      <div className="flex justify-end mt-4">
+        <button
+          onClick={onBack}
+          className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 mb-4"
+        >
+          ← Back to workouts
+        </button>
 
+        <button
+          onClick={() => deleteWorkout(workout.id)}
+          className="ml-auto bg-red-600 dark:bg-red-800 text-white px-4 py-2 rounded-lg hover:bg-red-700 dark:hover:bg-red-600 text-sm"
+        >
+            Delete Workout
+        </button>
+      </div>
       <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">
         {workout.name ?? 'Untitled Workout'}
       </h2>
