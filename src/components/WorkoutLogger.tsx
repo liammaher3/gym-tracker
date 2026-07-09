@@ -89,6 +89,23 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
     if (activeExerciseId === exerciseId) setActiveExerciseId(null)
   }
 
+  const deleteSet = async (setId: string, exerciseId: string) => {
+    const { error } = await supabase
+      .from('sets')
+      .delete()
+      .eq('id', setId)
+
+    if (error) { console.error(error); return }
+
+    setExercises(exercises.map((e) => {
+      if (e.id !== exerciseId) return e
+      const remaining = e.sets
+        .filter((s) => s.id !== setId)
+        .map((s, index) => ({ ...s, set_number: index + 1 }))
+      return { ...e, sets: remaining }
+    }))
+  }
+
   const addSet = async () => {
     if (!activeExerciseId) return
     const exercise = exercises.find((e) => e.id === activeExerciseId)
@@ -193,7 +210,7 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
               onClick={() => deleteExercise(ex.id)}
               className="text-red-400 dark:text-red-500 hover:text-red-600 dark:hover:text-red-400 text-sm ml-2"
             >
-              ✕
+              Delete
             </button>
           </div>
           {ex.sets.length > 0 && (
@@ -201,7 +218,15 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
               {ex.sets.map((s) => (
                 <li key={s.id} className="flex justify-between text-sm text-gray-500 dark:text-gray-400 px-2">
                   <span>Set {s.set_number}</span>
-                  <span>{s.reps} reps @ {s.weight}lbs</span>
+                  <div className="flex items-center gap-3">
+                    <span>{s.reps} reps @ {s.weight}lbs</span>
+                    <button
+                      onClick={() => deleteSet(s.id, ex.id)}
+                      className="text-xs text-red-400 dark:text-red-400 border border-red-300 dark:border-red-700 rounded px-2 py-0.5 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-300"
+                    >
+                      x
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
