@@ -78,6 +78,8 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
   }
 
   const deleteExercise = async (exerciseId: string) => {
+    const confirmed = window.confirm("Delete this exercise and all its sets?")
+    if (!confirmed) return 
     const { error } = await supabase
     .from('exercises') 
     .delete() 

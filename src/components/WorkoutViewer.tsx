@@ -64,6 +64,8 @@ export default function WorkoutViewer({ workout, onBack }: Props) {
   }, [workout.id])
 
   async function deleteWorkout(workoutId: string) {
+    const confirmed = window.confirm("Delete this workout and all its exercises? This cannot be undone")
+    if (!confirmed) return
     const { error } = await supabase
       .from('workouts')
       .delete()
