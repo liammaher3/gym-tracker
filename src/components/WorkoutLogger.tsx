@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import type { Exercise, WorkoutSet } from '../types'
+import WorkoutTimer from './WorkoutTimer'
 
 type Props = {
   userId: string
@@ -9,6 +10,12 @@ type Props = {
 }
 
 type ExerciseWithSets = Exercise & { sets: WorkoutSet[] }
+
+// function formatTime(seconds: number) {
+//   const m = Math.floor(seconds / 60).toString().padStart(2, '0')
+//   const s = (seconds % 60).toString().padStart(2, '0') 
+//   return `${m}:${s}`
+// }
 
 export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
   const [workoutId, setWorkoutId] = useState<string | null>(null)
@@ -22,6 +29,20 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
   const [setForm, setSetForm] = useState({ reps: 10, weight: 0 })
   const [savingSet, setSavingSet] = useState(false)
   const [savingExercise, setSavingExercise] = useState(false)
+
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    if (workoutId) {
+      timerRef.current = setInterval(() => {
+        setElapsedSeconds((prev) => prev + 1)
+      }, 1000)
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+  }, [workoutId])
 
   const startWorkout = async () => {
     setStarting(true)
@@ -85,6 +106,18 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
     setSavingSet(false)
   }
 
+  const handleFinish = async () => {
+    if (workoutId) {
+      console.log('Saving duration:', elapsedSeconds)
+      const { error } = await supabase
+        .from('workouts')
+        .update({ duration_seconds: elapsedSeconds })
+        .eq('id', workoutId)
+      if (error) console.error('Duration save error:', error)
+    }
+    onFinish()
+  }
+
   if (!workoutId) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
@@ -121,6 +154,8 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
         {workoutName || 'Untitled Workout'}
       </h2>
       <p className="text-sm text-gray-400 dark:text-gray-500 mb-6">Add exercises and sets below</p>
+      {/* Timer */}
+      <WorkoutTimer elapsedSeconds={elapsedSeconds} />
 
       {/* Completed exercises with their sets */}
       {exercises.map((ex) => (
@@ -205,7 +240,7 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
       </div>
 
       <button
-        onClick={onFinish}
+        onClick={handleFinish}
         className="w-full mt-6 text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
       >
         Finish Workout

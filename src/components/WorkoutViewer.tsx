@@ -7,7 +7,15 @@ type Props = {
   onBack: () => void
 }
 
-
+function formatDuration(seconds: number | null) {
+  if (!seconds) return null
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = seconds % 60
+  if (h > 0) return `${h}h ${m}m ${s}s`
+  if (m > 0) return `${m}m ${s}s`
+  return `${s}s`
+}
 
 type ExerciseWithSets = Exercise & { sets: WorkoutSet[] }
 
@@ -57,9 +65,9 @@ export default function WorkoutViewer({ workout, onBack }: Props) {
 
   async function deleteWorkout(workoutId: string) {
     const { error } = await supabase
-    .from('workouts')
-    .delete()
-    .eq('id', workoutId)
+      .from('workouts')
+      .delete()
+      .eq('id', workoutId)
 
     if (error) { console.error(error); return }
     onBack()
@@ -67,27 +75,32 @@ export default function WorkoutViewer({ workout, onBack }: Props) {
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-      <div className="flex justify-end mt-4">
-        <button
-          onClick={onBack}
-          className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 mb-4"
-        >
-          ← Back to workouts
-        </button>
+      <button
+        onClick={onBack}
+        className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 mb-4"
+      >
+        ← Back to workouts
+      </button>
 
+      <div className="flex justify-end">
         <button
           onClick={() => deleteWorkout(workout.id)}
-          className="ml-auto bg-red-600 dark:bg-red-800 text-white px-4 py-2 rounded-lg hover:bg-red-700 dark:hover:bg-red-600 text-sm"
+          className="bg-red-600 dark:bg-red-800 text-white px-4 py-2 rounded-lg hover:bg-red-700 dark:hover:bg-red-600 text-sm"
         >
-            Delete Workout
+          Delete Workout
         </button>
       </div>
+
       <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">
         {workout.name ?? 'Untitled Workout'}
       </h2>
-      <p className="text-sm text-gray-400 dark:text-gray-500 mb-6">
-        {new Date(workout.created_at).toLocaleDateString()}
-      </p>
+
+      <div className="flex gap-2 items-center text-sm text-gray-400 dark:text-gray-500 mb-6">
+        <span>{new Date(workout.created_at).toLocaleDateString()}</span>
+        {workout.duration_seconds && (
+          <span>· {formatDuration(workout.duration_seconds)}</span>
+        )}
+      </div>
 
       {loading ? (
         <p className="text-gray-500 dark:text-gray-400">Loading exercises...</p>
