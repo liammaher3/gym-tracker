@@ -77,6 +77,18 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
     setSavingExercise(false)
   }
 
+  const deleteExercise = async (exerciseId: string) => {
+    const { error } = await supabase
+    .from('exercises') 
+    .delete() 
+    .eq('id', exerciseId) 
+
+    if (error) { console.error(error); return } 
+
+    setExercises(exercises.filter((e) => e.id !== exerciseId))
+    if (activeExerciseId === exerciseId) setActiveExerciseId(null)
+  }
+
   const addSet = async () => {
     if (!activeExerciseId) return
     const exercise = exercises.find((e) => e.id === activeExerciseId)
@@ -159,19 +171,33 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
 
       {/* Completed exercises with their sets */}
       {exercises.map((ex) => (
-        <div key={ex.id} className="mb-4">
-          <button
-            onClick={() => setActiveExerciseId(ex.id)}
-            className={`w-full text-left font-medium px-4 py-2 rounded-lg mb-1 ${
+        <div key={ex.id} className="mb-3">
+          <div
+            className={`flex items-center justify-between px-4 py-2 rounded-lg ${
               ex.id === activeExerciseId
-                ? 'bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
-                : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200'
+                ? 'bg-blue-50 dark:bg-blue-900/40'
+                : 'bg-gray-50 dark:bg-gray-700'
             }`}
           >
-            {ex.name}
-          </button>
+            <span
+              onClick={() => setActiveExerciseId(ex.id)}
+              className={`flex-1 font-medium text-sm cursor-pointer ${
+                ex.id === activeExerciseId
+                  ? 'text-blue-700 dark:text-blue-300'
+                  : 'text-gray-700 dark:text-gray-200'
+              }`}
+            >
+              {ex.name}
+            </span>
+            <button
+              onClick={() => deleteExercise(ex.id)}
+              className="text-red-400 dark:text-red-500 hover:text-red-600 dark:hover:text-red-400 text-sm ml-2"
+            >
+              ✕
+            </button>
+          </div>
           {ex.sets.length > 0 && (
-            <ul className="space-y-1 pl-2">
+            <ul className="space-y-1 pl-2 mt-1">
               {ex.sets.map((s) => (
                 <li key={s.id} className="flex justify-between text-sm text-gray-500 dark:text-gray-400 px-2">
                   <span>Set {s.set_number}</span>
