@@ -30,19 +30,20 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
   const [savingSet, setSavingSet] = useState(false)
   const [savingExercise, setSavingExercise] = useState(false)
 
+  const [startTime, setStartTime] = useState<number | null>(null) 
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
-    if (workoutId) {
+    if (workoutId && startTime) {
       timerRef.current = setInterval(() => {
-        setElapsedSeconds((prev) => prev + 1)
+        setElapsedSeconds(Math.floor((Date.now() - startTime) / 1000))
       }, 1000)
     }
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
     }
-  }, [workoutId])
+  }, [workoutId, startTime])
 
   const startWorkout = async () => {
     setStarting(true)
@@ -54,7 +55,21 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
 
     if (error) { console.error(error); setStarting(false); return }
     setWorkoutId(data.id)
+    setStartTime(Date.now())
     setStarting(false)
+  }
+
+  const handleFinish = async () => {
+    if (workoutId && startTime) {
+      const endTime = Date.now()
+      const duration = Math.floor((endTime - startTime) / 1000)
+      const { error } = await supabase
+        .from('workouts')
+        .update({ duration_seconds: duration })
+        .eq('id', workoutId)
+      if (error) console.error('Duration save error:', error)
+    }
+    onFinish()
   }
 
   const addExercise = async () => {
@@ -135,18 +150,6 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
       )
     )
     setSavingSet(false)
-  }
-
-  const handleFinish = async () => {
-    if (workoutId) {
-      console.log('Saving duration:', elapsedSeconds)
-      const { error } = await supabase
-        .from('workouts')
-        .update({ duration_seconds: elapsedSeconds })
-        .eq('id', workoutId)
-      if (error) console.error('Duration save error:', error)
-    }
-    onFinish()
   }
 
   if (!workoutId) {
