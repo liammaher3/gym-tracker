@@ -1,27 +1,31 @@
 import { useEffect, useState, useRef } from 'react'
 
 type Props = {
+  initialMinutes: number
+  initialSeconds: number
+  onStart: (minutes: number, seconds: number) => void
   onDismiss: () => void
 }
 
-export default function RestTimer({ onDismiss }: Props) {
-  const [minutes, setMinutes] = useState(1)
-  const [seconds, setSeconds] = useState(30)
+export default function RestTimer({ initialMinutes, initialSeconds, onStart, onDismiss }: Props) {
+  const [minutes, setMinutes] = useState(initialMinutes)
+  const [seconds, setSeconds] = useState(initialSeconds)
   const [started, setStarted] = useState(false)
   const [remaining, setRemaining] = useState<number | null>(null)
   const [done, setDone] = useState(false)
   const startTimeRef = useRef<number | null>(null)
   const totalSecondsRef = useRef<number>(0)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
+  
   const start = () => {
     const total = minutes * 60 + seconds
     if (total <= 0) return
+    onStart(minutes, seconds) // save for next time
     totalSecondsRef.current = total
     startTimeRef.current = Date.now()
     setRemaining(total)
     setStarted(true)
-  }
+    }
 
   useEffect(() => {
     if (!started || remaining === null) return

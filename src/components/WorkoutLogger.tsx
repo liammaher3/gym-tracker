@@ -32,6 +32,8 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
   const [savingExercise, setSavingExercise] = useState(false)
 
   const [showRestTimer, setShowRestTimer] = useState(false) 
+  const [lastRestMinutes, setLastRestMinutes] = useState(1) 
+  const [lastRestSeconds, setLastRestSeconds] = useState(30) 
 
   const [startTime, setStartTime] = useState<number | null>(null) 
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
@@ -307,8 +309,16 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
       </button>
 
       {showRestTimer && (
-        <RestTimer onDismiss={() => setShowRestTimer(false)} />
-      )}  
+      <RestTimer
+        initialMinutes={lastRestMinutes}
+        initialSeconds={lastRestSeconds}
+        onStart={(m, s) => {
+          setLastRestMinutes(m)
+          setLastRestSeconds(s)
+        }}
+        onDismiss={() => setShowRestTimer(false)}
+        />
+      )}
     </div>
   )
 }
