@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import type { Exercise, WorkoutSet } from '../types'
 import WorkoutTimer from './WorkoutTimer'
+import RestTimer from './RestTimer'
 
 type Props = {
   userId: string
@@ -29,6 +30,8 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
   const [setForm, setSetForm] = useState({ reps: 10, weight: 0 })
   const [savingSet, setSavingSet] = useState(false)
   const [savingExercise, setSavingExercise] = useState(false)
+
+  const [showRestTimer, setShowRestTimer] = useState(false) 
 
   const [startTime, setStartTime] = useState<number | null>(null) 
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
@@ -93,7 +96,7 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
   }
 
   const deleteExercise = async (exerciseId: string) => {
-    const confirmed = window.confirm("Delete this exercise and all its sets?")
+    const confirmed = window.confirm("Do you want to delete this exercise and all its sets?")
     if (!confirmed) return 
     const { error } = await supabase
     .from('exercises') 
@@ -150,6 +153,7 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
       )
     )
     setSavingSet(false)
+    setShowRestTimer(true)
   }
 
   if (!workoutId) {
@@ -301,6 +305,10 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
       >
         Finish Workout
       </button>
+
+      {showRestTimer && (
+        <RestTimer onDismiss={() => setShowRestTimer(false)} />
+      )}  
     </div>
   )
 }
