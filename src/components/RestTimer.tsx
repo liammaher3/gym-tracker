@@ -30,13 +30,18 @@ export default function RestTimer({ initialMinutes, initialSeconds, onStart, onD
   useEffect(() => {
     if (!started || remaining === null) return
 
-    timerRef.current = setInterval(() => {
+  timerRef.current = setInterval(() => {
       const elapsed = Math.floor((Date.now() - startTimeRef.current!) / 1000)
       const left = totalSecondsRef.current - elapsed
       if (left <= 0) {
         setRemaining(0)
         setDone(true)
         clearInterval(timerRef.current!)
+        setTimeout(() => {
+            window.alert('Rest over! Time to get back to work.') 
+            onDismiss()
+        }, 50)
+        
       } else {
         setRemaining(left)
       }
