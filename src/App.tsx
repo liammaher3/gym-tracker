@@ -13,6 +13,7 @@ function App() {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<Tab>('workout')
+  const [logging, setLogging] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -27,9 +28,11 @@ function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
-    <p className="text-gray-500 dark:text-gray-400">Loading...</p>
-  </div>
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+      <p className="text-gray-500 dark:text-gray-400">Loading...</p>
+    </div>
+  )
 
   if (!session) return <AuthPage />
 
@@ -46,9 +49,19 @@ function App() {
           </button>
         </div>
 
-        {activeTab === 'workout' && <WorkoutTab userId={session.user.id} />}
-        {activeTab === 'history' && <HistoryTab userId={session.user.id} />}
-        {activeTab === 'diet' && <DietTab />}
+        <div className={activeTab === 'workout' ? 'block' : 'hidden'}>
+          <WorkoutTab
+            userId={session.user.id}
+            logging={logging}
+            setLogging={setLogging}
+          />
+        </div>
+        <div className={activeTab === 'history' ? 'block' : 'hidden'}>
+          <HistoryTab userId={session.user.id} />
+        </div>
+        <div className={activeTab === 'diet' ? 'block' : 'hidden'}>
+          <DietTab />
+        </div>
       </div>
 
       <BottomNav activeTab={activeTab} onChange={setActiveTab} />

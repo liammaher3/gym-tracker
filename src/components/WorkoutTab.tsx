@@ -1,14 +1,13 @@
-import { useState } from 'react'
 import WorkoutLogger from './WorkoutLogger'
 import FloatingActionButton from './FloatingActionButton'
 
 type Props = {
   userId: string
+  logging: boolean
+  setLogging: (value: boolean) => void
 }
 
-export default function WorkoutTab({ userId }: Props) {
-  const [logging, setLogging] = useState(false)
-
+export default function WorkoutTab({ userId, logging, setLogging }: Props) {
   return (
     <div>
       {logging ? (
