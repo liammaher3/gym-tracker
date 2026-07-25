@@ -1,18 +1,15 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import type { Workout } from '../types'
-import WorkoutLogger from './WorkoutLogger'
 import WorkoutViewer from './WorkoutViewer'
-import FloatingActionButton from './FloatingActionButton'
 
 type Props = {
   userId: string
 }
 
-export default function Dashboard({ userId }: Props) {
+export default function HistoryTab({ userId }: Props) {
   const [workouts, setWorkouts] = useState<Workout[]>([])
   const [loading, setLoading] = useState(true)
-  const [logging, setLogging] = useState(false)
   const [viewingWorkout, setViewingWorkout] = useState<Workout | null>(null)
 
   const fetchWorkouts = async () => {
@@ -28,46 +25,22 @@ export default function Dashboard({ userId }: Props) {
   }
 
   useEffect(() => {
-    const load = async () => {
-      await fetchWorkouts()
-    }
+    const load = async () => { await fetchWorkouts() }
     load()
   }, [userId])
-
-  if (loading) return <p className="text-gray-500 dark:text-gray-400">Loading workouts...</p>
-
-  if (logging) return (
-    <WorkoutLogger
-      userId={userId}
-      onFinish={() => { setLogging(false); fetchWorkouts() }}
-      onBack={() => setLogging(false)}
-    />
-  )
 
   if (viewingWorkout) return (
     <WorkoutViewer
       workout={viewingWorkout}
-      onBack={() => {
-        setViewingWorkout(null)
-        fetchWorkouts()
-      }}
+      onBack={() => { setViewingWorkout(null); fetchWorkouts() }}
     />
   )
 
+  if (loading) return <p className="text-gray-500 dark:text-gray-400">Loading workouts...</p>
+
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200">Your Workouts</h2>
-        <div>
-          <FloatingActionButton
-            actions={[
-              {label:'New Workout', 
-              icon: '🏋️',
-              onClick: () => setLogging(true),}
-            ]}
-          />
-        </div>
-      </div>
+      <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-6">Workout History</h2>
 
       {workouts.length === 0 ? (
         <p className="text-gray-400 dark:text-gray-500 text-center mt-20">No workouts yet. Start one!</p>
@@ -80,11 +53,16 @@ export default function Dashboard({ userId }: Props) {
             >
               <div>
                 <p className="font-medium text-gray-800 dark:text-gray-100">{workout.name ?? 'Untitled Workout'}</p>
-                <p className="text-sm text-gray-400 dark:text-gray-500">{new Date(workout.created_at).toLocaleDateString()}</p>
+                <div className="flex gap-2 text-sm text-gray-400 dark:text-gray-500">
+                  <span>{new Date(workout.created_at).toLocaleDateString()}</span>
+                  {workout.duration_seconds && (
+                    <span>· {Math.floor(workout.duration_seconds / 60)}m</span>
+                  )}
+                </div>
               </div>
               <button
                 onClick={() => setViewingWorkout(workout)}
-                className="text-sm text-blue-500 dark:text-blue-800 hover:text-blue-700 dark:hover:text-blue-300"
+                className="text-sm text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
               >
                 View →
               </button>
@@ -95,3 +73,4 @@ export default function Dashboard({ userId }: Props) {
     </div>
   )
 }
+

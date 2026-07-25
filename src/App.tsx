@@ -2,11 +2,17 @@ import { useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabaseClient'
 import AuthPage from './components/Auth'
-import Dashboard from './components/Dashboard'
+import BottomNav from './components/BottomNav'
+import WorkoutTab from './components/WorkoutTab'
+import HistoryTab from './components/HistoryTab'
+import DietTab from './components/DietTab'
+
+type Tab = 'workout' | 'history' | 'diet'
 
 function App() {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState<Tab>('workout')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -21,13 +27,15 @@ function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+    <p className="text-gray-500 dark:text-gray-400">Loading...</p>
+  </div>
 
   if (!session) return <AuthPage />
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-8">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+      <div className="max-w-2xl mx-auto px-4 pt-8 pb-24">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Gym Tracker</h1>
           <button
@@ -37,10 +45,16 @@ function App() {
             Sign out
           </button>
         </div>
-        <Dashboard userId={session.user.id} />
+
+        {activeTab === 'workout' && <WorkoutTab userId={session.user.id} />}
+        {activeTab === 'history' && <HistoryTab userId={session.user.id} />}
+        {activeTab === 'diet' && <DietTab />}
       </div>
+
+      <BottomNav activeTab={activeTab} onChange={setActiveTab} />
     </div>
   )
 }
 
 export default App
+
