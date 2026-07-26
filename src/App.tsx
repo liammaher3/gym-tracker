@@ -44,7 +44,7 @@ function App() {
       <div className="max-w-2xl mx-auto px-4 pt-8 pb-24">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">
-            Gym Tracker
+            Teretana
           </h1>
           <button
             onClick={() => supabase.auth.signOut()}
