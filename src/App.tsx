@@ -14,6 +14,14 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("workout");
   const [logging, setLogging] = useState(false);
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
+
+  const handleTabChange = (tab: Tab) => {
+    if (tab === "history") {
+      setHistoryRefreshKey((k) => k + 1);
+    }
+    setActiveTab(tab);
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -62,14 +70,14 @@ function App() {
           />
         </div>
         <div className={activeTab === "history" ? "block" : "hidden"}>
-          <HistoryTab userId={session.user.id} />
+          <HistoryTab userId={session.user.id} refreshKey={historyRefreshKey} />
         </div>
         <div className={activeTab === "diet" ? "block" : "hidden"}>
           <DietTab />
         </div>
       </div>
 
-      <BottomNav activeTab={activeTab} onChange={setActiveTab} />
+      <BottomNav activeTab={activeTab} onChange={handleTabChange} />
     </div>
   );
 }

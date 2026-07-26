@@ -5,9 +5,10 @@ import WorkoutViewer from "./WorkoutViewer";
 
 type Props = {
   userId: string;
+  refreshKey?: number;
 };
 
-export default function HistoryTab({ userId }: Props) {
+export default function HistoryTab({ userId, refreshKey }: Props) {
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewingWorkout, setViewingWorkout] = useState<Workout | null>(null);
@@ -29,7 +30,7 @@ export default function HistoryTab({ userId }: Props) {
       await fetchWorkouts();
     };
     load();
-  }, [userId]);
+  }, [userId, refreshKey]);
 
   if (viewingWorkout)
     return (
