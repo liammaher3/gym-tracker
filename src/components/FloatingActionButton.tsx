@@ -14,7 +14,7 @@ export default function FloatingActionButton({ actions }: Props) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="fixed bottom-20 right-2 flex flex-col items-center gap-3 z-40">
+    <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-6 flex flex-col items-center gap-3 z-40">
       {/* Fan out actions */}
       {actions.map((action, index) => (
         <div

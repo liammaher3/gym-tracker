@@ -78,7 +78,7 @@ export default function BottomNav({ activeTab, onChange }: Props) {
           <button
             key={tab.id}
             onClick={() => onChange(tab.id)}
-            className={`flex-1 flex flex-col items-center gap-1 py-3 text-xs font-medium transition-colors ${
+            className={`flex-1 flex flex-col items-center gap-1 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] text-xs font-medium transition-colors ${
               activeTab === tab.id
                 ? "text-blue-600 dark:text-blue-400"
                 : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
