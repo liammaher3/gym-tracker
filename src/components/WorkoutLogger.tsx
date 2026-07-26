@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabaseClient";
 import type { Exercise, WorkoutSet } from "../types";
 import WorkoutTimer from "./WorkoutTimer";
 import RestTimer from "./RestTimer";
+import ExercisePicker from "./ExercisePicker";
 
 type Props = {
   userId: string;
@@ -12,24 +13,16 @@ type Props = {
 
 type ExerciseWithSets = Exercise & { sets: WorkoutSet[] };
 
-// function formatTime(seconds: number) {
-//   const m = Math.floor(seconds / 60).toString().padStart(2, '0')
-//   const s = (seconds % 60).toString().padStart(2, '0')
-//   return `${m}:${s}`
-// }
-
 export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
   const [workoutId, setWorkoutId] = useState<string | null>(null);
   const [workoutName, setWorkoutName] = useState("");
   const [starting, setStarting] = useState(false);
 
   const [exercises, setExercises] = useState<ExerciseWithSets[]>([]);
-  const [exerciseNameInput, setExerciseNameInput] = useState("");
   const [activeExerciseId, setActiveExerciseId] = useState<string | null>(null);
 
   const [setForm, setSetForm] = useState({ reps: 10, weight: 0 });
   const [savingSet, setSavingSet] = useState(false);
-  const [savingExercise, setSavingExercise] = useState(false);
 
   const [showRestTimer, setShowRestTimer] = useState(false);
   const [lastRestMinutes, setLastRestMinutes] = useState(1);
@@ -81,28 +74,25 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
     onFinish();
   };
 
-  const addExercise = async () => {
-    if (!workoutId || !exerciseNameInput) return;
-    setSavingExercise(true);
+  // Called by ExercisePicker with the chosen/created library exercise.
+  const addExerciseToWorkout = async (name: string, libraryId: string) => {
+    if (!workoutId) return;
 
     const { data, error } = await supabase
       .from("exercises")
-      .insert({ workout_id: workoutId, name: exerciseNameInput })
+      .insert({ workout_id: workoutId, name, library_id: libraryId })
       .select()
       .single();
 
     if (error) {
       console.error(error);
-      setSavingExercise(false);
       return;
     }
 
     const newExercise: ExerciseWithSets = { ...data, sets: [] };
-    setExercises([...exercises, newExercise]);
+    setExercises((prev) => [...prev, newExercise]);
     setActiveExerciseId(newExercise.id);
-    setExerciseNameInput("");
     setSetForm({ reps: 10, weight: 0 });
-    setSavingExercise(false);
   };
 
   const deleteExercise = async (exerciseId: string) => {
@@ -320,22 +310,9 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
         </div>
       )}
 
-      {/* Add new exercise */}
-      <div className="space-y-3 border-t border-gray-100 dark:border-gray-700 pt-4">
-        <input
-          type="text"
-          placeholder="New exercise name (e.g. Bench Press)"
-          value={exerciseNameInput}
-          onChange={(e) => setExerciseNameInput(e.target.value)}
-          className="w-full border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <button
-          onClick={addExercise}
-          disabled={savingExercise || !exerciseNameInput}
-          className="w-full bg-gray-700 dark:bg-gray-600 text-white py-2 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-500 text-sm disabled:opacity-50"
-        >
-          {savingExercise ? "Adding..." : "+ Add Exercise"}
-        </button>
+      {/* Add new exercise via searchable picker */}
+      <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
+        <ExercisePicker userId={userId} onAdd={addExerciseToWorkout} />
       </div>
 
       <button
