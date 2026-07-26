@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { Icon } from "./ui/Icons";
 
 type LibraryItem = {
   id: string;
@@ -11,29 +12,32 @@ type LibraryItem = {
 
 type Props = {
   userId: string;
-  // Called once an exercise is chosen (existing) or created (custom).
   onAdd: (name: string, libraryId: string) => void | Promise<void>;
+  onCancel: () => void;
 };
 
 const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
-export default function ExercisePicker({ userId, onAdd }: Props) {
+const GROUPS = ["All", "Chest", "Back", "Legs", "Arms", "Shoulders", "Core"];
+
+/**
+ * Full-screen picker (was an inline dropdown). Same client-side ranking as
+ * before — exact > starts-with > word-start > contains — but the whole library
+ * gets the screen, so the list is scannable at arm's length in a gym.
+ */
+export default function ExercisePicker({ userId, onAdd, onCancel }: Props) {
   const [items, setItems] = useState<LibraryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
-  const [open, setOpen] = useState(false);
+  const [group, setGroup] = useState("All");
   const [busy, setBusy] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Load the whole library once (catalog + this user's customs via RLS),
-  // then filter client-side. ~900 rows is trivial to search in memory.
   useEffect(() => {
     const load = async () => {
       const { data, error } = await supabase
         .from("exercise_library")
         .select("id, name, equipment, primary_muscles, user_id")
         .order("name", { ascending: true });
-
       if (error) console.error(error);
       else setItems(data ?? []);
       setLoading(false);
@@ -41,29 +45,22 @@ export default function ExercisePicker({ userId, onAdd }: Props) {
     load();
   }, []);
 
-  // Close the dropdown when clicking outside.
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
-      )
-        setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
   const q = query.trim().toLowerCase();
 
-  // Rank: exact > starts-with > word-start > contains, then alphabetical.
   const results = items
+    .filter(
+      (it) =>
+        group === "All" ||
+        (it.primary_muscles ?? []).some((m) =>
+          m.toLowerCase().includes(group.toLowerCase()),
+        ),
+    )
     .map((it) => {
       const name = it.name.toLowerCase();
       let score = -1;
       if (name === q) score = 0;
       else if (name.startsWith(q)) score = 1;
-      else if (name.includes(` ${q}`)) score = 2;
+      else if (name.includes(" " + q)) score = 2;
       else if (name.includes(q)) score = 3;
       return { it, score };
     })
@@ -75,118 +72,136 @@ export default function ExercisePicker({ userId, onAdd }: Props) {
   const hasExact = items.some((it) => it.name.toLowerCase() === q);
   const showCreate = q.length > 0 && !hasExact;
 
-  const reset = () => {
-    setQuery("");
-    setOpen(false);
-    setBusy(false);
-  };
-
-  const handleSelect = async (item: LibraryItem) => {
+  const select = async (item: LibraryItem) => {
     if (busy) return;
     setBusy(true);
     await onAdd(item.name, item.id);
-    reset();
+    setBusy(false);
   };
 
-  const handleCreateCustom = async () => {
+  const createCustom = async () => {
     const name = query.trim();
     if (!name || busy) return;
     setBusy(true);
-
     const { data, error } = await supabase
       .from("exercise_library")
       .insert({ user_id: userId, name })
       .select("id, name, equipment, primary_muscles, user_id")
       .single();
-
     if (error) {
       console.error(error);
       setBusy(false);
       return;
     }
-
-    // Add to the in-memory list so it's searchable immediately.
     setItems((prev) => [...prev, data as LibraryItem]);
     await onAdd(data.name, data.id);
-    reset();
+    setBusy(false);
   };
 
   return (
-    <div ref={containerRef} className="relative">
-      <input
-        type="text"
-        placeholder="Search or add an exercise..."
-        value={query}
-        onChange={(e) => {
-          setQuery(e.target.value);
-          setOpen(true);
-        }}
-        onFocus={() => setOpen(true)}
-        className="w-full border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-      />
-
-      {open && (
-        <div className="absolute left-0 right-0 mt-1 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden">
-          <div className="max-h-64 overflow-y-auto">
-            {loading ? (
-              <p className="text-sm text-gray-400 dark:text-gray-500 px-4 py-3">
-                Loading exercises...
-              </p>
-            ) : results.length === 0 ? (
-              <p className="text-sm text-gray-400 dark:text-gray-500 px-4 py-3">
-                {q ? "No matches." : "Start typing to search."}
-              </p>
-            ) : (
-              <ul>
-                {results.map((item) => {
-                  const subtitle = [item.equipment, item.primary_muscles?.[0]]
-                    .filter(Boolean)
-                    .map((s) => cap(s as string))
-                    .join(" · ");
-                  return (
-                    <li key={item.id}>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => handleSelect(item)}
-                        className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
-                      >
-                        <span className="flex items-center gap-2">
-                          <span className="text-sm text-gray-800 dark:text-gray-100">
-                            {item.name}
-                          </span>
-                          {item.user_id && (
-                            <span className="text-[10px] uppercase tracking-wide text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded px-1 py-0.5">
-                              Custom
-                            </span>
-                          )}
-                        </span>
-                        {subtitle && (
-                          <span className="block text-xs text-gray-400 dark:text-gray-500">
-                            {subtitle}
-                          </span>
-                        )}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
+    <div className="grid-backdrop relative flex min-h-screen flex-col bg-ground text-ink">
+      <div className="relative flex-none px-[22px] pb-4 pt-2">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="font-head text-[26px] uppercase leading-none tracking-[.04em]">
+            Add exercise
           </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="p-1.5 font-body text-[11px] uppercase tracking-[.16em] text-dim hover:text-ink"
+          >
+            Cancel
+          </button>
+        </div>
 
-          {/* Persistent add-custom option, pinned below the scroll area */}
-          {showCreate && (
+        <div className="flex h-[46px] items-center gap-2.5 border border-accent bg-accent-soft px-3.5">
+          <Icon.Search size={16} className="text-accent" />
+          <input
+            autoFocus
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search the library"
+            className="w-full bg-transparent font-body text-[15px] text-ink placeholder:text-dim focus:outline-none"
+          />
+        </div>
+
+        <div className="mt-3 flex gap-[7px] overflow-x-auto">
+          {GROUPS.map((g) => (
             <button
+              key={g}
+              type="button"
+              onClick={() => setGroup(g)}
+              className={[
+                "flex-none border px-[11px] py-1.5 font-body text-[10px] uppercase tracking-[.14em]",
+                g === group
+                  ? "border-accent bg-accent text-on-accent"
+                  : "border-line text-dim hover:border-accent hover:text-accent",
+              ].join(" ")}
+            >
+              {g}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="relative flex-1 overflow-auto px-[22px]">
+        <div className="border-t border-line py-2.5 font-body text-[9px] uppercase leading-none tracking-[.22em] text-dim">
+          {loading ? "Loading library" : results.length + " matches"}
+        </div>
+        {results.map((item) => {
+          const subtitle = [item.equipment, item.primary_muscles?.[0]]
+            .filter(Boolean)
+            .map((s) => cap(s as string))
+            .join(" · ");
+          return (
+            <button
+              key={item.id}
               type="button"
               disabled={busy}
-              onClick={handleCreateCustom}
-              className="w-full text-left px-4 py-2.5 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-blue-600 dark:text-blue-400 font-medium disabled:opacity-50"
+              onClick={() => select(item)}
+              className="flex w-full items-center gap-3.5 border-b border-line px-0.5 py-[13px] text-left hover:bg-slab disabled:opacity-45"
             >
-              + Add “{query.trim()}” as a new exercise
+              <span className="flex-1">
+                <span className="flex items-center gap-2">
+                  <span className="font-body text-[15px] leading-tight">
+                    {item.name}
+                  </span>
+                  {item.user_id ? (
+                    <span className="border border-accent px-1.5 py-[2px] font-body text-[8.5px] uppercase leading-[1.3] tracking-[.14em] text-accent">
+                      Custom
+                    </span>
+                  ) : null}
+                </span>
+                {subtitle ? (
+                  <span className="mt-[5px] block font-body text-[10.5px] uppercase leading-none tracking-[.1em] text-dim">
+                    {subtitle}
+                  </span>
+                ) : null}
+              </span>
             </button>
-          )}
+          );
+        })}
+        {!loading && results.length === 0 ? (
+          <p className="py-8 text-center font-body text-[13px] text-dim">
+            {q ? "No matches." : "Start typing to search."}
+          </p>
+        ) : null}
+      </div>
+
+      {showCreate ? (
+        <div className="relative flex-none border-t border-line px-[22px] pb-[calc(2.5rem+env(safe-area-inset-bottom))] pt-3.5">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={createCustom}
+            className="flex h-[48px] w-full items-center justify-center gap-2 border border-dashed border-accent font-body text-[12px] font-semibold uppercase tracking-[.16em] text-accent hover:border-solid hover:bg-accent-soft disabled:opacity-45"
+          >
+            <Icon.Plus size={15} />
+            Create “{query.trim()}”
+          </button>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

@@ -1,44 +1,104 @@
+import Blueprint from "./ui/Blueprint";
+import { Icon } from "./ui/Icons";
 import WorkoutLogger from "./WorkoutLogger";
-import FloatingActionButton from "./FloatingActionButton";
 
 type Props = {
   userId: string;
   logging: boolean;
   setLogging: (value: boolean) => void;
+  onSignOut: () => void;
+  /** Optional summary strip; pass nulls and the cells read "—". */
+  stats?: {
+    thisWeek: number;
+    daysSince: number | null;
+    avgMinutes: number | null;
+  };
 };
 
-export default function WorkoutTab({ userId, logging, setLogging }: Props) {
+function Stat({ value, label }: { value: string; label: string }) {
   return (
-    <div>
-      {logging ? (
-        <WorkoutLogger
-          userId={userId}
-          onFinish={() => setLogging(false)}
-          onBack={() => setLogging(false)}
-        />
-      ) : (
-        <div className="flex flex-col items-center justify-center text-center px-6 mt-20">
-          <p className="text-4xl mb-4">🏋️</p>
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">
-            Ready to train?
-          </h2>
-          <p className="text-sm text-gray-400 dark:text-gray-500">
-            Tap + to start a new workout
-          </p>
-        </div>
-      )}
+    <div className="flex-1 py-3.5 text-center">
+      <div className="tnum font-head text-[24px] leading-none">{value}</div>
+      <div className="mt-[7px] font-body text-[9px] uppercase leading-none tracking-[.18em] text-dim">
+        {label}
+      </div>
+    </div>
+  );
+}
 
-      {!logging && (
-        <FloatingActionButton
-          actions={[
-            {
-              label: "New Workout",
-              icon: "💪",
-              onClick: () => setLogging(true),
-            },
-          ]}
-        />
-      )}
+export default function WorkoutTab({
+  userId,
+  logging,
+  setLogging,
+  onSignOut,
+  stats,
+}: Props) {
+  if (logging) {
+    return (
+      <WorkoutLogger
+        userId={userId}
+        onFinish={() => setLogging(false)}
+        onBack={() => setLogging(false)}
+      />
+    );
+  }
+
+  return (
+    <div className="grid-backdrop relative flex min-h-screen flex-col bg-ground text-ink">
+      <div className="relative flex items-start justify-between px-[22px] pt-2.5">
+        <div>
+          <div className="font-head text-[9px] uppercase leading-none tracking-[.32em] text-accent">
+            Teretana
+          </div>
+          <div className="mt-1.5 font-head text-[34px] uppercase leading-none tracking-[.01em]">
+            Workout
+          </div>
+        </div>
+        <button
+          type="button"
+          aria-label="Sign out"
+          onClick={onSignOut}
+          className="grid h-9 w-9 place-items-center border border-line text-dim hover:border-accent hover:text-accent"
+        >
+          <Icon.SignOut size={17} />
+        </button>
+      </div>
+
+      <div className="relative flex flex-1 flex-col items-center justify-center px-[26px] pb-24">
+        <Blueprint className="flex w-full flex-col items-center px-6 pb-[30px] pt-[38px]">
+          <Icon.Dumbbell size={54} className="text-accent" />
+          <div className="mt-5 font-head text-[26px] uppercase leading-tight tracking-[.06em]">
+            Ready to train
+          </div>
+          <div className="mt-1.5 text-center font-body text-[13px] leading-[1.5] text-dim">
+            Nothing logged today.
+            <br />
+            Start a session and the clock runs.
+          </div>
+          <button
+            type="button"
+            onClick={() => setLogging(true)}
+            className="mt-[26px] flex h-[54px] w-full items-center justify-center gap-2.5 bg-accent font-head text-[17px] uppercase tracking-[.16em] text-on-accent hover:bg-accent-hot"
+          >
+            <Icon.Plus size={18} />
+            Start workout
+          </button>
+        </Blueprint>
+
+        <div className="mt-[34px] flex w-full border-y border-line">
+          <Stat value={String(stats?.thisWeek ?? 0)} label="This week" />
+          <div className="w-px bg-line" />
+          <Stat
+            value={stats?.daysSince == null ? "—" : stats.daysSince + "d"}
+            label="Since last"
+          />
+          <div className="w-px bg-line" />
+          <Stat
+            value={stats?.avgMinutes == null ? "—" : stats.avgMinutes + "m"}
+            label="Avg length"
+          />
+        </div>
+      </div>
     </div>
   );
 }
