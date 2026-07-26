@@ -33,7 +33,7 @@ export default function WorkoutTab({ userId, logging, setLogging }: Props) {
           actions={[
             {
               label: "New Workout",
-              icon: "🏋️",
+              icon: "💪",
               onClick: () => setLogging(true),
             },
           ]}
