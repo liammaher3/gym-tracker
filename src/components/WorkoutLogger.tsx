@@ -197,7 +197,50 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
     );
   }
 
-  const activeExercise = exercises.find((e) => e.id === activeExerciseId);
+  const renderSetLogger = (ex: ExerciseWithSets) => (
+    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mt-2 mb-2">
+      <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-3">
+        Logging set {ex.sets.length + 1} for {ex.name}
+      </p>
+      <div className="grid grid-cols-2 gap-3 mb-3">
+        <div>
+          <label className="text-xs text-gray-400 dark:text-gray-500 mb-1 block">
+            Reps
+          </label>
+          <input
+            type="number"
+            value={setForm.reps}
+            onChange={(e) =>
+              setSetForm({ ...setForm, reps: Number(e.target.value) })
+            }
+            onFocus={(e) => e.target.select()}
+            className="w-full border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        <div>
+          <label className="text-xs text-gray-400 dark:text-gray-500 mb-1 block">
+            Weight (lbs)
+          </label>
+          <input
+            type="number"
+            value={setForm.weight}
+            onChange={(e) =>
+              setSetForm({ ...setForm, weight: Number(e.target.value) })
+            }
+            onFocus={(e) => e.target.select()}
+            className="w-full border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      </div>
+      <button
+        onClick={addSet}
+        disabled={savingSet}
+        className="w-full bg-blue-600 dark:bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 text-sm disabled:opacity-50"
+      >
+        {savingSet ? "Adding..." : "+ Add Set"}
+      </button>
+    </div>
+  );
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
@@ -260,55 +303,11 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
               ))}
             </ul>
           )}
+
+          {/* Set logger, inline under the active exercise */}
+          {ex.id === activeExerciseId && renderSetLogger(ex)}
         </div>
       ))}
-
-      {/* Set logger for the active exercise */}
-      {activeExercise && (
-        <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6">
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-3">
-            Logging set {activeExercise.sets.length + 1} for{" "}
-            {activeExercise.name}
-          </p>
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            <div>
-              <label className="text-xs text-gray-400 dark:text-gray-500 mb-1 block">
-                Reps
-              </label>
-              <input
-                type="number"
-                value={setForm.reps}
-                onChange={(e) =>
-                  setSetForm({ ...setForm, reps: Number(e.target.value) })
-                }
-                onFocus={(e) => e.target.select()}
-                className="w-full border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-gray-400 dark:text-gray-500 mb-1 block">
-                Weight (lbs)
-              </label>
-              <input
-                type="number"
-                value={setForm.weight}
-                onChange={(e) =>
-                  setSetForm({ ...setForm, weight: Number(e.target.value) })
-                }
-                onFocus={(e) => e.target.select()}
-                className="w-full border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-          <button
-            onClick={addSet}
-            disabled={savingSet}
-            className="w-full bg-blue-600 dark:bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 text-sm disabled:opacity-50"
-          >
-            {savingSet ? "Adding..." : "+ Add Set"}
-          </button>
-        </div>
-      )}
 
       {/* Add new exercise via searchable picker */}
       <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
