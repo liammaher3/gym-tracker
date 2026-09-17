@@ -169,7 +169,7 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
             New workout
           </div>
         </div>
-        <div className="relative flex-1 px-[22px] pt-6">
+        <div className="relative flex-1 px-[22px] pb-24 pt-6">
           <label className="font-body text-[9px] uppercase leading-none tracking-[.22em] text-dim">
             Name · optional
           </label>
@@ -237,7 +237,7 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
         <WorkoutTimer elapsedSeconds={elapsedSeconds} compact />
       </header>
 
-      <div className="relative flex-1 overflow-auto px-[22px] pb-2 pt-[18px]">
+      <div className="relative flex-1 overflow-auto px-[22px] pb-24 pt-[18px]">
         {activeExercise ? (
           <>
             <div className="mb-3 flex items-center justify-between">

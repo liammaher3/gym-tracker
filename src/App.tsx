@@ -96,10 +96,10 @@ export default function App() {
         <DietTab />
       </div>
 
-      {/* The logger owns the full screen while a set is being entered. */}
-      {logging ? null : (
-        <BottomNav activeTab={activeTab} onChange={handleTabChange} />
-      )}
+      {/* Nav stays up during a live workout so the user can duck into
+          History (e.g. to check a past lift) without losing the session —
+          tapping "Workout" always returns to whatever is currently active. */}
+      <BottomNav activeTab={activeTab} onChange={handleTabChange} />
     </div>
   );
 }
