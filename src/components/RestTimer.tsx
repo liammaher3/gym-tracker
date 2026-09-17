@@ -1,146 +1,200 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import Blueprint from "./ui/Blueprint";
+import { Icon } from "./ui/Icons";
 
 type Props = {
   initialMinutes: number;
   initialSeconds: number;
+  /** Remembered for next time. */
   onStart: (minutes: number, seconds: number) => void;
   onDismiss: () => void;
+  /** Shown in the UP NEXT strip. */
+  upNext?: {
+    exercise: string;
+    setNumber: number;
+    weight: number;
+    reps: number;
+  } | null;
 };
 
+const RADIUS = 118;
+const CIRC = 2 * Math.PI * RADIUS; // 741.4
+
+const fmt = (secs: number) => {
+  const m = Math.floor(secs / 60)
+    .toString()
+    .padStart(2, "0");
+  const s = (secs % 60).toString().padStart(2, "0");
+  return m + ":" + s;
+};
+
+/**
+ * Full-screen rest timer. Counts off Date.now() deltas so a throttled tab does
+ * not drift. On completion the ring fills and the copy changes in place —
+ * there is no window.alert (the old implementation's worst moment).
+ */
 export default function RestTimer({
   initialMinutes,
   initialSeconds,
   onStart,
   onDismiss,
+  upNext,
 }: Props) {
-  const [minutes, setMinutes] = useState(initialMinutes);
-  const [seconds, setSeconds] = useState(initialSeconds);
-  const [started, setStarted] = useState(false);
-  const [remaining, setRemaining] = useState<number | null>(null);
-  const [done, setDone] = useState(false);
-  const startTimeRef = useRef<number | null>(null);
-  const totalSecondsRef = useRef<number>(0);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const start = () => {
-    const total = minutes * 60 + seconds;
-    if (total <= 0) return;
-    onStart(minutes, seconds); // save for next time
-    totalSecondsRef.current = total;
-    startTimeRef.current = Date.now();
-    setRemaining(total);
-    setStarted(true);
-  };
+  const total = initialMinutes * 60 + initialSeconds;
+  const [remaining, setRemaining] = useState(total);
+  const [paused, setPaused] = useState(false);
+  const [target, setTarget] = useState(total);
+  const endRef = useRef<number>(0);
 
   useEffect(() => {
-    if (!started || remaining === null) return;
+    endRef.current = Date.now() + total * 1000;
+    onStart(initialMinutes, initialSeconds);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    timerRef.current = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - startTimeRef.current!) / 1000);
-      const left = totalSecondsRef.current - elapsed;
-      if (left <= 0) {
-        setRemaining(0);
-        setDone(true);
-        clearInterval(timerRef.current!);
-        setTimeout(() => {
-          window.alert("Rest over! Time to get back to work.");
-          onDismiss();
-        }, 50);
-      } else {
-        setRemaining(left);
-      }
-    }, 500);
+  useEffect(() => {
+    if (paused) return;
+    const id = setInterval(() => {
+      const left = Math.max(
+        0,
+        Math.round((endRef.current - Date.now()) / 1000),
+      );
+      setRemaining(left);
+      if (left === 0) clearInterval(id);
+    }, 250);
+    return () => clearInterval(id);
+  }, [paused]);
 
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [started]);
-
-  const formatRemaining = (secs: number) => {
-    const m = Math.floor(secs / 60)
-      .toString()
-      .padStart(2, "0");
-    const s = (secs % 60).toString().padStart(2, "0");
-    return `${m}:${s}`;
+  const shift = (delta: number) => {
+    endRef.current += delta * 1000;
+    setTarget((t) => Math.max(0, t + delta));
+    setRemaining((r) => Math.max(0, r + delta));
   };
 
-  // Setup screen — keep this as a small modal since you need to type a duration
-  if (!started) {
-    return (
-      <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-50 pb-8">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-xl w-80 mx-4">
-          <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-4">
-            Set rest duration
-          </h2>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex-1">
-              <label className="text-xs text-gray-400 dark:text-gray-500 mb-1 block">
-                Min
-              </label>
-              <input
-                type="number"
-                value={minutes}
-                onChange={(e) =>
-                  setMinutes(Math.max(0, Number(e.target.value)))
-                }
-                onFocus={(e) => e.target.select()}
-                className="w-full border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+  const togglePause = () => {
+    if (paused) endRef.current = Date.now() + remaining * 1000;
+    setPaused((p) => !p);
+  };
+
+  const done = remaining === 0;
+  const offset = done ? 0 : CIRC * (remaining / Math.max(1, target));
+
+  const chip =
+    "border border-line px-[17px] py-[11px] font-body text-[12px] tracking-[.1em] " +
+    "hover:border-accent hover:text-accent";
+
+  return (
+    <div className="grid-backdrop fixed inset-0 z-50 flex flex-col bg-ground">
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(120% 70% at 50% 34%, var(--accent-soft), transparent 70%)",
+        }}
+      />
+      <div className="relative flex flex-1 flex-col items-center justify-center px-[30px]">
+        <div className="font-body text-[9px] uppercase leading-none tracking-[.34em] text-accent">
+          {done ? "Rest done" : paused ? "Paused" : "Recovering"}
+        </div>
+
+        <div className="relative mt-[26px] grid h-[250px] w-[250px] place-items-center">
+          <svg
+            width="250"
+            height="250"
+            viewBox="0 0 250 250"
+            className="absolute inset-0 -rotate-90"
+          >
+            <circle
+              cx="125"
+              cy="125"
+              r={RADIUS}
+              fill="none"
+              stroke="var(--line)"
+              strokeWidth="1"
+            />
+            <circle
+              cx="125"
+              cy="125"
+              r={RADIUS}
+              fill="none"
+              stroke="var(--accent)"
+              strokeWidth="2"
+              strokeDasharray={CIRC}
+              strokeDashoffset={offset}
+              style={{ transition: "stroke-dashoffset .3s linear" }}
+            />
+          </svg>
+          {/* Registration ticks at the quarters. */}
+          <svg
+            width="250"
+            height="250"
+            viewBox="0 0 250 250"
+            className="absolute inset-0 opacity-50"
+          >
+            <g stroke="var(--accent)" strokeWidth="1">
+              <line x1="125" y1="10" x2="125" y2="22" />
+              <line x1="240" y1="125" x2="228" y2="125" />
+              <line x1="125" y1="240" x2="125" y2="228" />
+              <line x1="10" y1="125" x2="22" y2="125" />
+            </g>
+          </svg>
+          <div className="text-center">
+            <div className="tnum font-head text-[74px] leading-none tracking-[.02em]">
+              {fmt(remaining)}
             </div>
-            <span className="text-gray-400 dark:text-gray-500 mt-4">:</span>
-            <div className="flex-1">
-              <label className="text-xs text-gray-400 dark:text-gray-500 mb-1 block">
-                Sec
-              </label>
-              <input
-                type="number"
-                value={seconds}
-                onChange={(e) =>
-                  setSeconds(Math.min(59, Math.max(0, Number(e.target.value))))
-                }
-                onFocus={(e) => e.target.select()}
-                className="w-full border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+            <div className="mt-3 font-body text-[9.5px] uppercase leading-none tracking-[.24em] text-dim">
+              of {fmt(target)}
             </div>
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={onDismiss}
-              className="flex-1 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 py-2 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700"
-            >
-              Skip
-            </button>
-            <button
-              onClick={start}
-              className="flex-1 bg-blue-600 dark:bg-blue-500 text-white py-2 rounded-lg text-sm hover:bg-blue-700"
-            >
-              Start
-            </button>
           </div>
         </div>
-      </div>
-    );
-  }
 
-  // Floating pill — shows during countdown and when done
-  return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
-      <div
-        className={`flex items-center gap-3 px-5 py-3 rounded-full shadow-lg text-sm font-medium transition-colors ${
-          done
-            ? "bg-green-500 dark:bg-green-600 text-white"
-            : "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100"
-        }`}
-      >
-        <span>
-          {done ? "✓ Rest done" : `Rest ${formatRemaining(remaining!)}`}
-        </span>
+        <div className="mt-[34px] flex gap-[9px]">
+          <button type="button" className={chip} onClick={() => shift(-30)}>
+            −30s
+          </button>
+          <button type="button" className={chip} onClick={() => shift(30)}>
+            +30s
+          </button>
+          <button type="button" className={chip} onClick={togglePause}>
+            {paused ? "Resume" : "Pause"}
+          </button>
+        </div>
+
+        {upNext ? (
+          <Blueprint className="mt-10 flex w-full items-center justify-between px-[18px] py-[15px]">
+            <div>
+              <div className="font-body text-[9px] uppercase leading-none tracking-[.22em] text-dim">
+                Up next
+              </div>
+              <div className="mt-2 font-head text-[19px] uppercase leading-none tracking-[.05em]">
+                {upNext.exercise} · Set {upNext.setNumber}
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="tnum font-body text-[15px] leading-none">
+                {upNext.weight} × {upNext.reps}
+              </div>
+              <div className="mt-[7px] font-body text-[9px] uppercase leading-none tracking-[.16em] text-dim">
+                Target
+              </div>
+            </div>
+          </Blueprint>
+        ) : null}
+      </div>
+
+      <div className="relative flex-none px-[30px] pb-[calc(2.5rem+env(safe-area-inset-bottom))]">
         <button
+          type="button"
           onClick={onDismiss}
-          className="text-xs opacity-70 hover:opacity-100 border border-gray-400/40 dark:border-gray-500/40 rounded-full px-2 py-0.5"
+          className="flex h-[56px] w-full items-center justify-center gap-2.5 bg-accent font-head text-[17px] uppercase tracking-[.2em] text-on-accent hover:bg-accent-hot"
         >
-          {done ? "Dismiss" : "Skip"}
+          {done ? <Icon.Check size={18} /> : <Icon.Timer size={18} />}
+          {done ? "Back to work" : "Skip rest"}
         </button>
+        <div className="mt-4 text-center font-body text-[10px] uppercase tracking-[.14em] text-dim">
+          Default {fmt(initialMinutes * 60 + initialSeconds)} · change in
+          settings
+        </div>
       </div>
     </div>
   );

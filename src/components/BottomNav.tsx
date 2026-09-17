@@ -1,94 +1,47 @@
-type Tab = "workout" | "history" | "diet";
+import type { JSX } from "react";
+import { Icon } from "./ui/Icons";
+
+export type Tab = "workout" | "history" | "diet";
 
 type Props = {
   activeTab: Tab;
   onChange: (tab: Tab) => void;
 };
 
-export default function BottomNav({ activeTab, onChange }: Props) {
-  const tabs = [
-    {
-      id: "workout" as Tab,
-      label: "Workout",
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="22"
-          height="22"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M6 4v16M18 4v16M2 8h4M18 8h4M2 16h4M18 16h4" />
-        </svg>
-      ),
-    },
-    {
-      id: "history" as Tab,
-      label: "History",
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="22"
-          height="22"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <circle cx="12" cy="12" r="10" />
-          <polyline points="12 6 12 12 16 14" />
-        </svg>
-      ),
-    },
-    {
-      id: "diet" as Tab,
-      label: "Diet",
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="22"
-          height="22"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M18 8h1a4 4 0 0 1 0 8h-1" />
-          <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" />
-          <line x1="6" y1="1" x2="6" y2="4" />
-          <line x1="10" y1="1" x2="10" y2="4" />
-          <line x1="14" y1="1" x2="14" y2="4" />
-        </svg>
-      ),
-    },
-  ];
+const TABS: {
+  id: Tab;
+  label: string;
+  Glyph: (p: { size?: number }) => JSX.Element;
+}[] = [
+  { id: "workout", label: "Workout", Glyph: Icon.Barbell },
+  { id: "history", label: "History", Glyph: Icon.History },
+  { id: "diet", label: "Diet", Glyph: Icon.Diet },
+];
 
+export default function BottomNav({ activeTab, onChange }: Props) {
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-30">
-      <div className="max-w-2xl mx-auto flex">
-        {tabs.map((tab) => (
+    <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-line bg-ground/95 pb-[calc(0.5rem+env(safe-area-inset-bottom))] backdrop-blur">
+      {TABS.map(({ id, label, Glyph }) => {
+        const active = id === activeTab;
+        return (
           <button
-            key={tab.id}
-            onClick={() => onChange(tab.id)}
-            className={`flex-1 flex flex-col items-center gap-1 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] text-xs font-medium transition-colors ${
-              activeTab === tab.id
-                ? "text-blue-600 dark:text-blue-400"
-                : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-            }`}
+            key={id}
+            type="button"
+            onClick={() => onChange(id)}
+            className={[
+              "flex flex-1 flex-col items-center gap-1.5 pb-[9px] pt-[13px]",
+              active
+                ? "-mt-px border-t-2 border-accent text-accent"
+                : "text-dim hover:text-ink",
+            ].join(" ")}
           >
-            {tab.icon}
-            {tab.label}
+            <Glyph size={21} />
+            <span className="font-body text-[9.5px] font-semibold uppercase leading-none tracking-[.16em]">
+              {label}
+            </span>
           </button>
-        ))}
-      </div>
-    </div>
+        );
+      })}
+    </nav>
   );
 }

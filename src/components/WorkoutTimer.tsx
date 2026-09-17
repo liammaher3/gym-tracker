@@ -1,45 +1,54 @@
 type Props = {
   elapsedSeconds: number;
+  /** Compact readout for the logger header; the full h/m/s block otherwise. */
+  compact?: boolean;
 };
 
-export default function WorkoutTimer({ elapsedSeconds }: Props) {
+const pad = (n: number) => n.toString().padStart(2, "0");
+
+export default function WorkoutTimer({
+  elapsedSeconds,
+  compact = false,
+}: Props) {
+  const h = Math.floor(elapsedSeconds / 3600);
+  const m = Math.floor((elapsedSeconds % 3600) / 60);
+  const s = elapsedSeconds % 60;
+
+  if (compact) {
+    return (
+      <div className="text-right">
+        <div className="tnum font-head text-[27px] leading-none tracking-[.03em]">
+          {h > 0 ? pad(h) + ":" : ""}
+          {pad(m)}:{pad(s)}
+        </div>
+        <div className="mt-[5px] font-body text-[8.5px] uppercase leading-none tracking-[.2em] text-dim">
+          Elapsed
+        </div>
+      </div>
+    );
+  }
+
+  const cell = (value: string, label: string) => (
+    <div className="flex flex-col items-center">
+      <span className="tnum font-head text-[30px] leading-none">{value}</span>
+      <span className="mt-1.5 font-body text-[9px] uppercase leading-none tracking-[.18em] text-dim">
+        {label}
+      </span>
+    </div>
+  );
+
   return (
-    <div className="flex justify-center mb-6">
-      <div className="flex gap-2 items-end bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-2xl px-6 py-3">
-        <div className="flex flex-col items-center">
-          <span className="font-mono text-3xl font-bold text-gray-800 dark:text-gray-100">
-            {Math.floor(elapsedSeconds / 3600)
-              .toString()
-              .padStart(2, "0")}
-          </span>
-          <span className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-            hrs
-          </span>
-        </div>
-        <span className="font-mono text-3xl font-bold text-gray-400 dark:text-gray-500 mb-4">
+    <div className="mb-6 flex justify-center">
+      <div className="flex items-end gap-2 border border-line bg-slab px-6 py-3">
+        {cell(pad(h), "hrs")}
+        <span className="tnum mb-4 font-head text-[30px] leading-none text-dim">
           :
         </span>
-        <div className="flex flex-col items-center">
-          <span className="font-mono text-3xl font-bold text-gray-800 dark:text-gray-100">
-            {Math.floor((elapsedSeconds % 3600) / 60)
-              .toString()
-              .padStart(2, "0")}
-          </span>
-          <span className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-            min
-          </span>
-        </div>
-        <span className="font-mono text-3xl font-bold text-gray-400 dark:text-gray-500 mb-4">
+        {cell(pad(m), "min")}
+        <span className="tnum mb-4 font-head text-[30px] leading-none text-dim">
           :
         </span>
-        <div className="flex flex-col items-center">
-          <span className="font-mono text-3xl font-bold text-gray-800 dark:text-gray-100">
-            {(elapsedSeconds % 60).toString().padStart(2, "0")}
-          </span>
-          <span className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-            sec
-          </span>
-        </div>
+        {cell(pad(s), "sec")}
       </div>
     </div>
   );

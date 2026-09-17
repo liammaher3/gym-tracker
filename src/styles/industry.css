@@ -1,0 +1,152 @@
+/* Industry — Teretana theme tokens.
+   Import from main.tsx AFTER ./index.css.
+   Every component reads these through the Tailwind mappings in tailwind.config.js. */
+
+@import url("https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@400;600&display=swap");
+
+:root,
+:root[data-theme="dark"] {
+  --ground: #0b0d0f;
+  --slab: rgba(148, 188, 227, 0.055);
+  --ink: #e2e9ef;
+  --dim: rgba(226, 233, 239, 0.5);
+  --line: rgba(148, 188, 227, 0.2);
+  --accent: #7ea6cc;
+  --accent-soft: rgba(126, 166, 204, 0.1);
+  --accent-hot: #94bce3;
+  --on-accent: #080a0c;
+  --danger: #5c2925;
+  --grid: rgba(148, 188, 227, 0.05);
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --ground: #f2f2f3;
+  --slab: rgba(29, 31, 32, 0.035);
+  --ink: #1d1f20;
+  --dim: rgba(29, 31, 32, 0.55);
+  --line: rgba(29, 31, 32, 0.16);
+  --accent: #5980a6;
+  --accent-soft: rgba(89, 128, 166, 0.1);
+  --accent-hot: #416180;
+  --on-accent: #f2f2f3;
+  --danger: #8c4a43;
+  --grid: rgba(29, 31, 32, 0.045);
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: Barlow, system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Square corners are the system. Undo any stray rounding. */
+* {
+  border-radius: 0;
+}
+
+a {
+  color: var(--accent);
+  text-underline-offset: 3px;
+}
+a:hover {
+  color: var(--accent-hot);
+}
+
+:focus {
+  outline: none;
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+::selection {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+/* Tabular numerals — every readout that changes uses this so digits don't jitter. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* The blueprint grid behind every screen. */
+.grid-backdrop::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(0deg, var(--grid) 0 1px, transparent 1px 34px),
+    repeating-linear-gradient(90deg, var(--grid) 0 1px, transparent 1px 34px);
+}
+
+/* Registration marks — rendered by <Blueprint>, styled here. */
+.corner {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  color: color-mix(in srgb, var(--ink) 55%, transparent);
+  pointer-events: none;
+}
+.corner::before,
+.corner::after {
+  content: "";
+  position: absolute;
+  background: currentColor;
+}
+.corner::before {
+  left: 5px;
+  top: 0;
+  width: 1px;
+  height: 100%;
+}
+.corner::after {
+  top: 5px;
+  left: 0;
+  width: 100%;
+  height: 1px;
+}
+.corner-tl {
+  top: -6px;
+  left: -6px;
+}
+.corner-tr {
+  top: -6px;
+  right: -6px;
+}
+.corner-bl {
+  bottom: -6px;
+  left: -6px;
+}
+.corner-br {
+  bottom: -6px;
+  right: -6px;
+}
+
+/* Kill the number-input spinners the old logger needed. Nothing types numbers now,
+   but the exercise search still uses a text input. */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* Prevent the pull-to-refresh / rubber-band fighting the swipe-to-delete gesture. */
+.swipe-row {
+  touch-action: pan-y;
+  user-select: none;
+}
