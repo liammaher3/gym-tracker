@@ -8,7 +8,7 @@ type Props = {
   /** Remembered for next time. */
   onStart: (minutes: number, seconds: number) => void;
   onDismiss: () => void;
-  /** Shown in the UP NEXT strip. */
+  /** Shown next to the countdown. */
   upNext?: {
     exercise: string;
     setNumber: number;
@@ -16,9 +16,6 @@ type Props = {
     reps: number;
   } | null;
 };
-
-const RADIUS = 118;
-const CIRC = 2 * Math.PI * RADIUS; // 741.4
 
 const fmt = (secs: number) => {
   const m = Math.floor(secs / 60)
@@ -29,9 +26,12 @@ const fmt = (secs: number) => {
 };
 
 /**
- * Full-screen rest timer. Counts off Date.now() deltas so a throttled tab does
- * not drift. On completion the ring fills and the copy changes in place —
- * there is no window.alert (the old implementation's worst moment).
+ * Compact rest-timer bar, anchored above the bottom nav. Counts off
+ * Date.now() deltas so a throttled tab does not drift. Unlike the old
+ * full-screen modal, this never blocks the rest of the app — logging a set,
+ * swapping exercises, even switching tabs all stay reachable mid-rest. Tap
+ * the bar to reveal the +/- 30s adjusters; pause and skip are always one
+ * tap away.
  */
 export default function RestTimer({
   initialMinutes,
@@ -44,6 +44,7 @@ export default function RestTimer({
   const [remaining, setRemaining] = useState(total);
   const [paused, setPaused] = useState(false);
   const [target, setTarget] = useState(total);
+  const [expanded, setExpanded] = useState(false);
   const endRef = useRef<number>(0);
 
   useEffect(() => {
@@ -76,126 +77,124 @@ export default function RestTimer({
     setPaused((p) => !p);
   };
 
-  const done = remaining === 0;
-  const offset = done ? 0 : CIRC * (remaining / Math.max(1, target));
+  const toggleExpanded = () => setExpanded((e) => !e);
+  const onToggleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      toggleExpanded();
+    }
+  };
 
-  const chip =
-    "border border-line px-[17px] py-[11px] font-body text-[12px] tracking-[.1em] " +
+  const done = remaining === 0;
+  const pct = done ? 1 : 1 - remaining / Math.max(1, target);
+
+  const adjustChip =
+    "flex-1 border border-line py-2 font-body text-[11px] tracking-[.1em] " +
     "hover:border-accent hover:text-accent";
 
   return (
-    <div className="grid-backdrop fixed inset-0 z-50 flex flex-col bg-ground">
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(120% 70% at 50% 34%, var(--accent-soft), transparent 70%)",
-        }}
-      />
-      <div className="relative flex flex-1 flex-col items-center justify-center px-[30px]">
-        <div className="font-body text-[9px] uppercase leading-none tracking-[.34em] text-accent">
-          {done ? "Rest done" : paused ? "Paused" : "Recovering"}
+    <div
+      className="fixed inset-x-0 z-40 px-[14px]"
+      style={{ bottom: "calc(4.5rem + env(safe-area-inset-bottom))" }}
+    >
+      <Blueprint
+        className={
+          "overflow-hidden bg-ground/95 shadow-lg backdrop-blur transition-colors" +
+          (done ? " !border-success" : "")
+        }
+      >
+        <div className={"h-[2px] w-full " + (done ? "bg-success/30" : "bg-line")}>
+          <div
+            className={"h-full transition-colors " + (done ? "bg-success" : "bg-accent")}
+            style={{ width: `${pct * 100}%`, transition: "width .3s linear" }}
+          />
         </div>
 
-        <div className="relative mt-[26px] grid h-[250px] w-[250px] place-items-center">
-          <svg
-            width="250"
-            height="250"
-            viewBox="0 0 250 250"
-            className="absolute inset-0 -rotate-90"
+        <div className="flex items-center gap-3 px-[14px] py-[11px]">
+          <div
+            role="button"
+            tabIndex={0}
+            aria-expanded={expanded}
+            onClick={toggleExpanded}
+            onKeyDown={onToggleKeyDown}
+            className="flex min-w-0 flex-1 cursor-pointer items-center gap-3"
           >
-            <circle
-              cx="125"
-              cy="125"
-              r={RADIUS}
-              fill="none"
-              stroke="var(--line)"
-              strokeWidth="1"
-            />
-            <circle
-              cx="125"
-              cy="125"
-              r={RADIUS}
-              fill="none"
-              stroke="var(--accent)"
-              strokeWidth="2"
-              strokeDasharray={CIRC}
-              strokeDashoffset={offset}
-              style={{ transition: "stroke-dashoffset .3s linear" }}
-            />
-          </svg>
-          {/* Registration ticks at the quarters. */}
-          <svg
-            width="250"
-            height="250"
-            viewBox="0 0 250 250"
-            className="absolute inset-0 opacity-50"
-          >
-            <g stroke="var(--accent)" strokeWidth="1">
-              <line x1="125" y1="10" x2="125" y2="22" />
-              <line x1="240" y1="125" x2="228" y2="125" />
-              <line x1="125" y1="240" x2="125" y2="228" />
-              <line x1="10" y1="125" x2="22" y2="125" />
-            </g>
-          </svg>
-          <div className="text-center">
-            <div className="tnum font-head text-[74px] leading-none tracking-[.02em]">
+            <div
+              className={
+                "tnum font-head text-[21px] leading-none tracking-[.02em]" +
+                (done ? " text-success" : "")
+              }
+            >
               {fmt(remaining)}
             </div>
-            <div className="mt-3 font-body text-[9.5px] uppercase leading-none tracking-[.24em] text-dim">
-              of {fmt(target)}
+            <div className="min-w-0 flex-1">
+              <div
+                className={
+                  "font-body text-[8px] uppercase leading-none tracking-[.2em]" +
+                  (done ? " text-success" : " text-accent")
+                }
+              >
+                {done ? "Rest done" : paused ? "Paused" : "Resting"}
+              </div>
+              {upNext ? (
+                <div className="mt-[5px] truncate font-body text-[11px] leading-none text-dim">
+                  {upNext.exercise} · Set {upNext.setNumber}
+                </div>
+              ) : null}
             </div>
+            <Icon.ChevronDown
+              size={13}
+              className={
+                "shrink-0 text-dim transition-transform" +
+                (expanded ? " rotate-180" : "")
+              }
+            />
           </div>
+
+          {!done ? (
+            <button
+              type="button"
+              aria-label={paused ? "Resume" : "Pause"}
+              onClick={togglePause}
+              className="grid h-8 w-8 shrink-0 place-items-center border border-line text-dim hover:border-accent hover:text-accent"
+            >
+              {paused ? <Icon.Play size={14} /> : <Icon.Pause size={14} />}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            aria-label={done ? "Back to work" : "Skip rest"}
+            onClick={onDismiss}
+            className={
+              "grid h-8 w-8 shrink-0 place-items-center text-on-accent transition-colors " +
+              (done
+                ? "bg-success hover:brightness-110"
+                : "bg-accent hover:bg-accent-hot")
+            }
+          >
+            {done ? <Icon.Check size={15} /> : <Icon.X size={15} />}
+          </button>
         </div>
 
-        <div className="mt-[34px] flex gap-[9px]">
-          <button type="button" className={chip} onClick={() => shift(-30)}>
-            −30s
-          </button>
-          <button type="button" className={chip} onClick={() => shift(30)}>
-            +30s
-          </button>
-          <button type="button" className={chip} onClick={togglePause}>
-            {paused ? "Resume" : "Pause"}
-          </button>
-        </div>
-
-        {upNext ? (
-          <Blueprint className="mt-10 flex w-full items-center justify-between px-[18px] py-[15px]">
-            <div>
-              <div className="font-body text-[9px] uppercase leading-none tracking-[.22em] text-dim">
-                Up next
-              </div>
-              <div className="mt-2 font-head text-[19px] uppercase leading-none tracking-[.05em]">
-                {upNext.exercise} · Set {upNext.setNumber}
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="tnum font-body text-[15px] leading-none">
-                {upNext.weight} × {upNext.reps}
-              </div>
-              <div className="mt-[7px] font-body text-[9px] uppercase leading-none tracking-[.16em] text-dim">
-                Target
-              </div>
-            </div>
-          </Blueprint>
+        {expanded ? (
+          <div className="flex gap-[9px] border-t border-line px-[14px] py-[11px]">
+            <button
+              type="button"
+              className={adjustChip}
+              onClick={() => shift(-30)}
+            >
+              −30s
+            </button>
+            <button
+              type="button"
+              className={adjustChip}
+              onClick={() => shift(30)}
+            >
+              +30s
+            </button>
+          </div>
         ) : null}
-      </div>
-
-      <div className="relative flex-none px-[30px] pb-[calc(2.5rem+env(safe-area-inset-bottom))]">
-        <button
-          type="button"
-          onClick={onDismiss}
-          className="flex h-[56px] w-full items-center justify-center gap-2.5 bg-accent font-head text-[17px] uppercase tracking-[.2em] text-on-accent hover:bg-accent-hot"
-        >
-          {done ? <Icon.Check size={18} /> : <Icon.Timer size={18} />}
-          {done ? "Back to work" : "Skip rest"}
-        </button>
-        <div className="mt-4 text-center font-body text-[10px] uppercase tracking-[.14em] text-dim">
-          Default {fmt(initialMinutes * 60 + initialSeconds)} · change in
-          settings
-        </div>
-      </div>
+      </Blueprint>
     </div>
   );
 }

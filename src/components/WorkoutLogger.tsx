@@ -237,7 +237,12 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
         <WorkoutTimer elapsedSeconds={elapsedSeconds} compact />
       </header>
 
-      <div className="relative flex-1 overflow-auto px-[22px] pb-24 pt-[18px]">
+      <div
+        className={
+          "relative flex-1 overflow-auto px-[22px] pt-[18px] " +
+          (showRestTimer ? "pb-40" : "pb-24")
+        }
+      >
         {activeExercise ? (
           <>
             <div className="mb-3 flex items-center justify-between">

@@ -15,6 +15,7 @@ export default {
         "accent-hot": "var(--accent-hot)",
         "on-accent": "var(--on-accent)",
         danger: "var(--danger)",
+        success: "var(--success)",
       },
       fontFamily: {
         head: ['"Barlow Condensed"', "system-ui", "sans-serif"],

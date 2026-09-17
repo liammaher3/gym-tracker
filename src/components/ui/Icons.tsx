@@ -15,16 +15,20 @@ import type { SVGProps } from "react";
 import {
   ArrowRightFromLine,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Dumbbell,
   Lock,
   Minus,
+  Pause,
   Pencil,
+  Play,
   Plus,
   Search,
   Timer,
   Trash2,
+  X,
 } from "lucide-react";
 
 const stroke = { strokeWidth: 1.5 } as const;
@@ -102,17 +106,21 @@ export function KeypadIcon({ size = 16, ...rest }: GlyphProps) {
 
 export const Icon = {
   Check: (p: GlyphProps) => <Check {...stroke} {...p} />,
+  ChevronDown: (p: GlyphProps) => <ChevronDown {...stroke} {...p} />,
   ChevronLeft: (p: GlyphProps) => <ChevronLeft {...stroke} {...p} />,
   ChevronRight: (p: GlyphProps) => <ChevronRight {...stroke} {...p} />,
   Dumbbell: (p: GlyphProps) => <Dumbbell {...stroke} {...p} />,
   Lock: (p: GlyphProps) => <Lock {...stroke} {...p} />,
   Minus: (p: GlyphProps) => <Minus {...stroke} {...p} />,
+  Pause: (p: GlyphProps) => <Pause {...stroke} {...p} />,
+  Play: (p: GlyphProps) => <Play {...stroke} {...p} />,
   Plus: (p: GlyphProps) => <Plus {...stroke} {...p} />,
   Pencil: (p: GlyphProps) => <Pencil {...stroke} {...p} />,
   Search: (p: GlyphProps) => <Search {...stroke} {...p} />,
   SignOut: (p: GlyphProps) => <ArrowRightFromLine {...stroke} {...p} />,
   Timer: (p: GlyphProps) => <Timer {...stroke} {...p} />,
   Trash: (p: GlyphProps) => <Trash2 {...stroke} {...p} />,
+  X: (p: GlyphProps) => <X {...stroke} {...p} />,
   Barbell: BarbellIcon,
   History: HistoryIcon,
   Diet: DietIcon,

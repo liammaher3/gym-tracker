@@ -16,6 +16,7 @@
   --accent-hot: #94bce3;
   --on-accent: #080a0c;
   --danger: #5c2925;
+  --success: #3a6b47;
   --grid: rgba(148, 188, 227, 0.05);
   color-scheme: dark;
 }
@@ -31,6 +32,7 @@
   --accent-hot: #416180;
   --on-accent: #f2f2f3;
   --danger: #8c4a43;
+  --success: #4a8c5a;
   --grid: rgba(29, 31, 32, 0.045);
   color-scheme: light;
 }
