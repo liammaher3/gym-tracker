@@ -79,11 +79,7 @@ export default function ProgressTab({ userId, refreshKey }: Props) {
           name,
           points: points.sort((a, b) => a.date.localeCompare(b.date)),
         }))
-        .sort((a, b) =>
-          b.points[b.points.length - 1].date.localeCompare(
-            a.points[a.points.length - 1].date,
-          ),
-        );
+        .sort((a, b) => b.points.length - a.points.length);
 
       setSummaries(built);
       setLoading(false);
