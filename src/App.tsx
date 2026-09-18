@@ -6,7 +6,7 @@ import AuthPage from "./components/Auth";
 import BottomNav, { type Tab } from "./components/BottomNav";
 import WorkoutTab from "./components/WorkoutTab";
 import HistoryTab from "./components/HistoryTab";
-import DietTab from "./components/DietTab";
+import ProgressTab from "./components/ProgressTab";
 import { useTheme } from "./theme/useTheme";
 
 export default function App() {
@@ -17,6 +17,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>("workout");
   const [logging, setLogging] = useState(false);
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
+  const [progressRefreshKey, setProgressRefreshKey] = useState(0);
   const [recent, setRecent] = useState<Workout[]>([]);
 
   useEffect(() => {
@@ -63,6 +64,7 @@ export default function App() {
 
   const handleTabChange = (tab: Tab) => {
     if (tab === "history") setHistoryRefreshKey((k) => k + 1);
+    if (tab === "progress") setProgressRefreshKey((k) => k + 1);
     setActiveTab(tab);
   };
 
@@ -92,8 +94,8 @@ export default function App() {
       <div className={activeTab === "history" ? "block" : "hidden"}>
         <HistoryTab userId={session.user.id} refreshKey={historyRefreshKey} />
       </div>
-      <div className={activeTab === "diet" ? "block" : "hidden"}>
-        <DietTab />
+      <div className={activeTab === "progress" ? "block" : "hidden"}>
+        <ProgressTab userId={session.user.id} refreshKey={progressRefreshKey} />
       </div>
 
       {/* Nav stays up during a live workout so the user can duck into

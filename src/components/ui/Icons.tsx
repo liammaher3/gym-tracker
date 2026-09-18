@@ -28,6 +28,7 @@ import {
   Search,
   Timer,
   Trash2,
+  TrendingUp,
   X,
 } from "lucide-react";
 
@@ -63,19 +64,6 @@ export function HistoryIcon({ size = 21, ...rest }: GlyphProps) {
     <svg {...base(size)} {...rest}>
       <circle cx="12" cy="12" r="10" />
       <polyline points="12 6 12 12 16 14" />
-    </svg>
-  );
-}
-
-/** Cup — the repo's own path, restroked to 1.5. */
-export function DietIcon({ size = 21, ...rest }: GlyphProps) {
-  return (
-    <svg {...base(size)} {...rest}>
-      <path d="M18 8h1a4 4 0 0 1 0 8h-1" />
-      <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" />
-      <line x1="6" y1="1" x2="6" y2="4" />
-      <line x1="10" y1="1" x2="10" y2="4" />
-      <line x1="14" y1="1" x2="14" y2="4" />
     </svg>
   );
 }
@@ -120,10 +108,10 @@ export const Icon = {
   SignOut: (p: GlyphProps) => <ArrowRightFromLine {...stroke} {...p} />,
   Timer: (p: GlyphProps) => <Timer {...stroke} {...p} />,
   Trash: (p: GlyphProps) => <Trash2 {...stroke} {...p} />,
+  TrendingUp: (p: GlyphProps) => <TrendingUp {...stroke} {...p} />,
   X: (p: GlyphProps) => <X {...stroke} {...p} />,
   Barbell: BarbellIcon,
   History: HistoryIcon,
-  Diet: DietIcon,
   Backspace: BackspaceIcon,
   Keypad: KeypadIcon,
 };

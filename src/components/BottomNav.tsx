@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import { Icon } from "./ui/Icons";
 
-export type Tab = "workout" | "history" | "diet";
+export type Tab = "workout" | "history" | "progress";
 
 type Props = {
   activeTab: Tab;
@@ -15,7 +15,7 @@ const TABS: {
 }[] = [
   { id: "workout", label: "Workout", Glyph: Icon.Barbell },
   { id: "history", label: "History", Glyph: Icon.History },
-  { id: "diet", label: "Diet", Glyph: Icon.Diet },
+  { id: "progress", label: "Progress", Glyph: Icon.TrendingUp },
 ];
 
 export default function BottomNav({ activeTab, onChange }: Props) {
