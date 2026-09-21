@@ -18,7 +18,17 @@ type Props = {
 
 const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
-const GROUPS = ["All", "Chest", "Back", "Legs", "Arms", "Shoulders", "Core"];
+// Filter chips -> the db's primary_muscle values (the db has no "legs"/"arms"/"core").
+const GROUP_MUSCLES: Record<string, string[]> = {
+  Chest: ["chest"],
+  Back: ["back", "lower back", "traps"],
+  Legs: ["quadriceps", "hamstrings", "glutes", "calves", "adductors"],
+  Arms: ["biceps", "triceps", "forearms"],
+  Shoulders: ["shoulders"],
+  Core: ["abdominals"],
+  Cardio: ["cardio"],
+};
+const GROUPS = ["All", ...Object.keys(GROUP_MUSCLES)];
 
 /**
  * Full-screen picker (was an inline dropdown). Same client-side ranking as
@@ -52,7 +62,7 @@ export default function ExercisePicker({ userId, onAdd, onCancel }: Props) {
       (it) =>
         group === "All" ||
         (it.primary_muscles ?? []).some((m) =>
-          m.toLowerCase().includes(group.toLowerCase()),
+          GROUP_MUSCLES[group]?.includes(m.toLowerCase()),
         ),
     )
     .map((it) => {
