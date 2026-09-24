@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { GROUP_MUSCLES, MUSCLE_GROUPS } from "../lib/muscleGroups";
 import { Icon } from "./ui/Icons";
 
 type LibraryItem = {
@@ -19,16 +20,7 @@ type Props = {
 const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
 // Filter chips -> the db's primary_muscle values (the db has no "legs"/"arms"/"core").
-const GROUP_MUSCLES: Record<string, string[]> = {
-  Chest: ["chest"],
-  Back: ["back", "lower back", "traps"],
-  Legs: ["quadriceps", "hamstrings", "glutes", "calves", "adductors"],
-  Arms: ["biceps", "triceps", "forearms"],
-  Shoulders: ["shoulders"],
-  Core: ["abdominals"],
-  Cardio: ["cardio"],
-};
-const GROUPS = ["All", ...Object.keys(GROUP_MUSCLES)];
+const GROUPS = ["All", ...MUSCLE_GROUPS];
 
 /**
  * Full-screen picker (was an inline dropdown). Same client-side ranking as

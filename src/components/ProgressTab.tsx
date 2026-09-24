@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { groupForMuscles, MUSCLE_GROUPS, OTHER_GROUP } from "../lib/muscleGroups";
 import type { WeightPoint } from "./WeightChart";
 import ExerciseProgress from "./ExerciseProgress";
 import Blueprint from "./ui/Blueprint";
@@ -12,8 +13,11 @@ type Props = {
 
 type ExerciseSummary = {
   name: string;
+  group: string;
   points: WeightPoint[];
 };
+
+const GROUP_ORDER = [...MUSCLE_GROUPS, OTHER_GROUP];
 
 export default function ProgressTab({ userId, refreshKey }: Props) {
   const [summaries, setSummaries] = useState<ExerciseSummary[]>([]);
@@ -38,12 +42,29 @@ export default function ProgressTab({ userId, refreshKey }: Props) {
 
       const { data: exercises, error: eErr } = await supabase
         .from("exercises")
-        .select("id, workout_id, name")
+        .select("id, workout_id, name, library_id")
         .in("workout_id", workoutIds.length > 0 ? workoutIds : [""]);
       if (eErr) {
         console.error(eErr);
         setLoading(false);
         return;
+      }
+
+      const libraryIds = Array.from(
+        new Set((exercises ?? []).map((e) => e.library_id).filter(Boolean)),
+      );
+      const { data: libraryRows, error: lErr } = await supabase
+        .from("exercise_library")
+        .select("id, primary_muscles")
+        .in("id", libraryIds.length > 0 ? libraryIds : [""]);
+      if (lErr) console.error(lErr);
+      const musclesByLibraryId = new Map(
+        (libraryRows ?? []).map((r) => [r.id, r.primary_muscles as string[] | null]),
+      );
+      const groupByName = new Map<string, string>();
+      for (const ex of exercises ?? []) {
+        if (groupByName.has(ex.name)) continue;
+        groupByName.set(ex.name, groupForMuscles(musclesByLibraryId.get(ex.library_id)));
       }
 
       const exerciseIds = (exercises ?? []).map((e) => e.id);
@@ -77,9 +98,14 @@ export default function ProgressTab({ userId, refreshKey }: Props) {
       const built = Array.from(byName.entries())
         .map(([name, points]) => ({
           name,
+          group: groupByName.get(name) ?? OTHER_GROUP,
           points: points.sort((a, b) => a.date.localeCompare(b.date)),
         }))
-        .sort((a, b) => b.points.length - a.points.length);
+        .sort(
+          (a, b) =>
+            GROUP_ORDER.indexOf(a.group) - GROUP_ORDER.indexOf(b.group) ||
+            a.name.localeCompare(b.name),
+        );
 
       setSummaries(built);
       setLoading(false);
@@ -119,43 +145,55 @@ export default function ProgressTab({ userId, refreshKey }: Props) {
           </p>
         ) : (
           <div className="flex flex-col gap-[11px] pt-1">
-            {summaries.map((s) => {
+            {summaries.map((s, i) => {
               const latest = s.points[s.points.length - 1];
               const change = latest.weight - s.points[0].weight;
+              const showHeader = i === 0 || summaries[i - 1].group !== s.group;
               return (
-                <Blueprint
-                  key={s.name}
-                  onClick={() => setSelected(s)}
-                  className="flex items-center gap-3.5 px-4 py-[15px]"
-                >
-                  <Icon.Dumbbell size={18} className="flex-none text-accent" />
-                  <div className="flex-1">
-                    <div className="font-head text-[19px] uppercase leading-none tracking-[.05em]">
-                      {s.name}
+                <div key={s.name}>
+                  {showHeader ? (
+                    <div
+                      className={[
+                        "mb-2.5 font-body text-[9px] uppercase leading-none tracking-[.22em] text-dim",
+                        i === 0 ? "" : "mt-2.5",
+                      ].join(" ")}
+                    >
+                      {s.group}
                     </div>
-                    <div className="mt-[7px] font-body text-[11px] uppercase leading-none tracking-[.1em] text-dim">
-                      {s.points.length} session{s.points.length === 1 ? "" : "s"}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="tnum font-head text-[19px] leading-none">
-                      {latest.weight}
-                      <span className="text-[11px] text-dim"> lb × {latest.reps}</span>
-                    </div>
-                    {change !== 0 ? (
-                      <div
-                        className={[
-                          "tnum mt-[7px] font-body text-[11px] leading-none",
-                          change > 0 ? "text-success" : "text-danger",
-                        ].join(" ")}
-                      >
-                        {change > 0 ? "+" : ""}
-                        {change} lb
+                  ) : null}
+                  <Blueprint
+                    onClick={() => setSelected(s)}
+                    className="flex items-center gap-3.5 px-4 py-[15px]"
+                  >
+                    <Icon.Dumbbell size={18} className="flex-none text-accent" />
+                    <div className="flex-1">
+                      <div className="font-head text-[19px] uppercase leading-none tracking-[.05em]">
+                        {s.name}
                       </div>
-                    ) : null}
-                  </div>
-                  <Icon.ChevronRight size={15} className="text-accent" />
-                </Blueprint>
+                      <div className="mt-[7px] font-body text-[11px] uppercase leading-none tracking-[.1em] text-dim">
+                        {s.points.length} session{s.points.length === 1 ? "" : "s"}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="tnum font-head text-[19px] leading-none">
+                        {latest.weight}
+                        <span className="text-[11px] text-dim"> lb × {latest.reps}</span>
+                      </div>
+                      {change !== 0 ? (
+                        <div
+                          className={[
+                            "tnum mt-[7px] font-body text-[11px] leading-none",
+                            change > 0 ? "text-success" : "text-danger",
+                          ].join(" ")}
+                        >
+                          {change > 0 ? "+" : ""}
+                          {change} lb
+                        </div>
+                      ) : null}
+                    </div>
+                    <Icon.ChevronRight size={15} className="text-accent" />
+                  </Blueprint>
+                </div>
               );
             })}
           </div>
