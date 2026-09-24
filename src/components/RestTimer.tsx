@@ -60,15 +60,16 @@ export default function RestTimer({
         0,
         Math.round((endRef.current - Date.now()) / 1000),
       );
+      // Keep ticking at zero so +30s after the rest ends counts down again.
       setRemaining(left);
-      if (left === 0) clearInterval(id);
     }, 250);
     return () => clearInterval(id);
   }, [paused]);
 
   const shift = (delta: number) => {
-    endRef.current += delta * 1000;
-    setTarget((t) => Math.max(0, t + delta));
+    // Once the rest is over, the end time is in the past: extend from now.
+    endRef.current = Math.max(endRef.current, Date.now()) + delta * 1000;
+    setTarget((t) => Math.max(0, remaining === 0 ? delta : t + delta));
     setRemaining((r) => Math.max(0, r + delta));
   };
 

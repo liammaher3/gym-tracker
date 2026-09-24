@@ -32,6 +32,8 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
   const [showRestTimer, setShowRestTimer] = useState(false);
   const [restMinutes, setRestMinutes] = useState(2);
   const [restSeconds, setRestSeconds] = useState(30);
+  // Bumped on every logged set to remount the rest timer, restarting it.
+  const [restKey, setRestKey] = useState(0);
 
   const [startTime, setStartTime] = useState<number | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -149,6 +151,7 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
         e.id === activeExerciseId ? { ...e, sets: [...e.sets, data] } : e,
       ),
     );
+    setRestKey((k) => k + 1);
     setShowRestTimer(true);
   };
 
@@ -352,6 +355,7 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
 
       {showRestTimer ? (
         <RestTimer
+          key={restKey}
           initialMinutes={restMinutes}
           initialSeconds={restSeconds}
           upNext={
