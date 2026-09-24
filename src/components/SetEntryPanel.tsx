@@ -70,8 +70,13 @@ export default function SetEntryPanel({
     commit(f, value);
   };
 
-  /** Half a plate per side. No-op on reps. */
-  const half = () => active === "weight" && nudge("weight", 2.5);
+  /** Appends ".5" to the whole-number weight (e.g. 22 → 22.5). No-op on reps. */
+  const half = () => {
+    if (active !== "weight") return;
+    const current = Number(buffer ?? weight) || 0;
+    setBuffer(null);
+    commit("weight", Math.floor(current) + 0.5);
+  };
 
   const recallLast = () => {
     if (!last) return;
