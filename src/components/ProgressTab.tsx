@@ -23,6 +23,7 @@ export default function ProgressTab({ userId, refreshKey }: Props) {
   const [summaries, setSummaries] = useState<ExerciseSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<ExerciseSummary | null>(null);
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     const load = async () => {
@@ -113,6 +114,9 @@ export default function ProgressTab({ userId, refreshKey }: Props) {
     load();
   }, [userId, refreshKey]);
 
+  const q = query.trim().toLowerCase();
+  const visible = q === "" ? summaries : summaries.filter((s) => s.name.toLowerCase().includes(q));
+
   if (selected) {
     return (
       <ExerciseProgress
@@ -132,6 +136,28 @@ export default function ProgressTab({ userId, refreshKey }: Props) {
         <div className="mt-1.5 font-head text-[34px] uppercase leading-none tracking-[.01em]">
           Progress
         </div>
+        {!loading && summaries.length > 0 ? (
+          <div className="mt-3.5 flex h-[46px] items-center gap-2.5 border border-accent bg-accent-soft px-3.5">
+            <Icon.Search size={16} className="flex-none text-accent" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search exercises"
+              className="w-full bg-transparent font-body text-[15px] text-ink placeholder:text-dim focus:outline-none"
+            />
+            {query ? (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                aria-label="Clear search"
+                className="flex-none p-1 text-dim hover:text-ink"
+              >
+                <Icon.X size={14} />
+              </button>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <div className="relative flex-1 overflow-auto px-[22px] pb-24">
@@ -143,12 +169,16 @@ export default function ProgressTab({ userId, refreshKey }: Props) {
           <p className="py-16 text-center font-body text-[13px] text-dim">
             No exercises logged yet. Finish a workout to start tracking.
           </p>
+        ) : visible.length === 0 ? (
+          <p className="py-16 text-center font-body text-[13px] text-dim">
+            No exercises match “{query.trim()}”.
+          </p>
         ) : (
           <div className="flex flex-col gap-[11px] pt-1">
-            {summaries.map((s, i) => {
+            {visible.map((s, i) => {
               const latest = s.points[s.points.length - 1];
               const change = latest.weight - s.points[0].weight;
-              const showHeader = i === 0 || summaries[i - 1].group !== s.group;
+              const showHeader = i === 0 || visible[i - 1].group !== s.group;
               return (
                 <div key={s.name}>
                   {showHeader ? (
