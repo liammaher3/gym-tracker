@@ -15,6 +15,8 @@ type Props = {
   userId: string;
   onAdd: (name: string, libraryId: string) => void | Promise<void>;
   onCancel: () => void;
+  /** Leaves room at the bottom for the rest-timer bar. */
+  restTimerShown?: boolean;
 };
 
 const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
@@ -27,7 +29,12 @@ const GROUPS = ["All", ...MUSCLE_GROUPS];
  * before — exact > starts-with > word-start > contains — but the whole library
  * gets the screen, so the list is scannable at arm's length in a gym.
  */
-export default function ExercisePicker({ userId, onAdd, onCancel }: Props) {
+export default function ExercisePicker({
+  userId,
+  onAdd,
+  onCancel,
+  restTimerShown = false,
+}: Props) {
   const [items, setItems] = useState<LibraryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -147,7 +154,12 @@ export default function ExercisePicker({ userId, onAdd, onCancel }: Props) {
         </div>
       </div>
 
-      <div className="relative flex-1 overflow-auto px-[22px]">
+      <div
+        className={
+          "relative flex-1 overflow-auto px-[22px]" +
+          (restTimerShown && !showCreate ? " pb-40" : "")
+        }
+      >
         <div className="border-t border-line py-2.5 font-body text-[9px] uppercase leading-none tracking-[.22em] text-dim">
           {loading ? "Loading library" : results.length + " matches"}
         </div>
@@ -192,7 +204,14 @@ export default function ExercisePicker({ userId, onAdd, onCancel }: Props) {
       </div>
 
       {showCreate ? (
-        <div className="relative flex-none border-t border-line px-[22px] pb-[calc(2.5rem+env(safe-area-inset-bottom))] pt-3.5">
+        <div
+          className={
+            "relative flex-none border-t border-line px-[22px] pt-3.5 " +
+            (restTimerShown
+              ? "pb-[calc(9rem+env(safe-area-inset-bottom))]"
+              : "pb-[calc(2.5rem+env(safe-area-inset-bottom))]")
+          }
+        >
           <button
             type="button"
             disabled={busy}

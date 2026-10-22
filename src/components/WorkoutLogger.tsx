@@ -205,176 +205,185 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
     0,
   );
 
+  // Rendered beside both the picker and the logger, in the same slot, so a
+  // trip to the picker doesn't remount it and restart the rest.
+  const restTimer = showRestTimer ? (
+    <RestTimer
+      key={restKey}
+      initialMinutes={restMinutes}
+      initialSeconds={restSeconds}
+      upNext={
+        activeExercise
+          ? {
+              exercise: activeExercise.name,
+              setNumber: activeExercise.sets.length + 1,
+              weight: setForm.weight,
+              reps: setForm.reps,
+            }
+          : null
+      }
+      onStart={(m, s) => {
+        setRestMinutes(m);
+        setRestSeconds(s);
+      }}
+      onDismiss={() => setShowRestTimer(false)}
+    />
+  ) : null;
+
   if (picking) {
     return (
-      <ExercisePicker
-        userId={userId}
-        onAdd={addExerciseToWorkout}
-        onCancel={() => setPicking(false)}
-      />
+      <>
+        <ExercisePicker
+          userId={userId}
+          onAdd={addExerciseToWorkout}
+          onCancel={() => setPicking(false)}
+          restTimerShown={showRestTimer}
+        />
+        {restTimer}
+      </>
     );
   }
 
   /* ── the logger ───────────────────────────────────────────────── */
   return (
-    <div className="relative flex min-h-screen flex-col bg-ground text-ink">
-      <header className="relative flex flex-none items-center justify-between border-b border-line px-[22px] pb-3.5 pt-2">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            aria-label="Back"
-            onClick={onBack}
-            className="grid h-[30px] w-[30px] place-items-center border border-line text-dim hover:border-accent hover:text-accent"
-          >
-            <Icon.ChevronLeft size={15} />
-          </button>
-          <div>
-            <div className="font-head text-[9px] uppercase leading-none tracking-[.28em] text-accent">
-              Session live
-            </div>
-            <div className="mt-1 font-head text-[22px] uppercase leading-[1.05] tracking-[.02em]">
-              {workoutName || "Untitled workout"}
+    <>
+      <div className="relative flex min-h-screen flex-col bg-ground text-ink">
+        <header className="relative flex flex-none items-center justify-between border-b border-line px-[22px] pb-3.5 pt-2">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              aria-label="Back"
+              onClick={onBack}
+              className="grid h-[30px] w-[30px] place-items-center border border-line text-dim hover:border-accent hover:text-accent"
+            >
+              <Icon.ChevronLeft size={15} />
+            </button>
+            <div>
+              <div className="font-head text-[9px] uppercase leading-none tracking-[.28em] text-accent">
+                Session live
+              </div>
+              <div className="mt-1 font-head text-[22px] uppercase leading-[1.05] tracking-[.02em]">
+                {workoutName || "Untitled workout"}
+              </div>
             </div>
           </div>
-        </div>
-        <WorkoutTimer elapsedSeconds={elapsedSeconds} compact />
-      </header>
+          <WorkoutTimer elapsedSeconds={elapsedSeconds} compact />
+        </header>
 
-      <div
-        className={
-          "relative flex-1 overflow-auto px-[22px] pt-[18px] " +
-          (showRestTimer ? "pb-40" : "pb-24")
-        }
-      >
-        {activeExercise ? (
-          <>
-            <div className="mb-3 flex items-center justify-between">
-              <span className="font-head text-[20px] uppercase leading-none tracking-[.05em]">
-                {activeExercise.name}
-              </span>
-              <button
-                type="button"
-                onClick={() => setPicking(true)}
-                className="p-1 font-body text-[10px] font-semibold uppercase tracking-[.14em] text-dim hover:text-accent"
-              >
-                Swap
-              </button>
-            </div>
-
-            <div className="mb-2 flex items-center justify-between">
-              <span className="font-body text-[9px] uppercase leading-none tracking-[.22em] text-dim">
-                Logged
-              </span>
-              <span className="font-body text-[9px] uppercase leading-none tracking-[.14em] text-dim">
-                {volume.toLocaleString()} lb
-              </span>
-            </div>
-            <div className="border-t border-line">
-              {activeExercise.sets.map((s) => (
-                <SetRow
-                  key={s.id}
-                  index={s.set_number}
-                  weight={s.weight}
-                  reps={s.reps}
-                  open={openSetId === s.id}
-                  onToggle={() =>
-                    setOpenSetId((id) => (id === s.id ? null : s.id))
-                  }
-                  onDelete={() => deleteSet(s.id, activeExercise.id)}
-                />
-              ))}
-            </div>
-
-            <SetEntryPanel
-              weight={setForm.weight}
-              reps={setForm.reps}
-              setNumber={activeExercise.sets.length + 1}
-              last={
-                lastSet ? { weight: lastSet.weight, reps: lastSet.reps } : null
-              }
-              saving={savingSet}
-              onChange={(next) => setSetForm(next)}
-              onLog={addSet}
-            />
-          </>
-        ) : (
-          <p className="py-10 text-center font-body text-[13px] text-dim">
-            Add an exercise to start logging sets.
-          </p>
-        )}
-
-        {others.length > 0 ? (
-          <div className="mt-6 border-t border-line pt-4">
-            <div className="mb-3 font-body text-[9px] uppercase leading-none tracking-[.22em] text-dim">
-              Also this session
-            </div>
-            {others.map((e) => (
-              <div
-                key={e.id}
-                className="flex items-center gap-3 border-b border-line px-1 py-[11px] hover:bg-slab"
-              >
-                <button
-                  type="button"
-                  onClick={() => setActiveExerciseId(e.id)}
-                  className="flex-1 text-left font-body text-[14px] text-dim hover:text-ink"
-                >
-                  {e.name}
-                </button>
-                <span className="font-body text-[11px] uppercase tracking-[.1em] text-dim">
-                  {e.sets.length} sets
+        <div
+          className={
+            "relative flex-1 overflow-auto px-[22px] pt-[18px] " +
+            (showRestTimer ? "pb-40" : "pb-24")
+          }
+        >
+          {activeExercise ? (
+            <>
+              <div className="mb-3 flex items-center justify-between">
+                <span className="font-head text-[20px] uppercase leading-none tracking-[.05em]">
+                  {activeExercise.name}
                 </span>
                 <button
                   type="button"
-                  aria-label={"Delete " + e.name}
-                  onClick={() => deleteExercise(e.id)}
-                  className="text-dim hover:text-danger"
+                  onClick={() => setPicking(true)}
+                  className="p-1 font-body text-[10px] font-semibold uppercase tracking-[.14em] text-dim hover:text-accent"
                 >
-                  <Icon.Trash size={14} />
+                  Swap
                 </button>
               </div>
-            ))}
-          </div>
-        ) : null}
 
-        <button
-          type="button"
-          onClick={() => setPicking(true)}
-          className="mt-3.5 flex h-[46px] w-full items-center justify-center gap-2 border border-dashed border-line font-body text-[12px] font-semibold uppercase tracking-[.16em] text-accent hover:border-solid hover:bg-accent-soft"
-        >
-          <Icon.Plus size={15} />
-          Add exercise
-        </button>
-        <button
-          type="button"
-          onClick={handleFinish}
-          className="mb-1 mt-2.5 h-10 w-full font-body text-[11px] uppercase tracking-[.2em] text-dim hover:text-ink"
-        >
-          Finish workout
-        </button>
-      </div>
+              <div className="mb-2 flex items-center justify-between">
+                <span className="font-body text-[9px] uppercase leading-none tracking-[.22em] text-dim">
+                  Logged
+                </span>
+                <span className="font-body text-[9px] uppercase leading-none tracking-[.14em] text-dim">
+                  {volume.toLocaleString()} lb
+                </span>
+              </div>
+              <div className="border-t border-line">
+                {activeExercise.sets.map((s) => (
+                  <SetRow
+                    key={s.id}
+                    index={s.set_number}
+                    weight={s.weight}
+                    reps={s.reps}
+                    open={openSetId === s.id}
+                    onToggle={() =>
+                      setOpenSetId((id) => (id === s.id ? null : s.id))
+                    }
+                    onDelete={() => deleteSet(s.id, activeExercise.id)}
+                  />
+                ))}
+              </div>
 
-      {showRestTimer ? (
-        <RestTimer
-          key={restKey}
-          initialMinutes={restMinutes}
-          initialSeconds={restSeconds}
-          upNext={
-            activeExercise
-              ? {
-                  exercise: activeExercise.name,
-                  setNumber: activeExercise.sets.length + 1,
-                  weight: setForm.weight,
-                  reps: setForm.reps,
+              <SetEntryPanel
+                weight={setForm.weight}
+                reps={setForm.reps}
+                setNumber={activeExercise.sets.length + 1}
+                last={
+                  lastSet ? { weight: lastSet.weight, reps: lastSet.reps } : null
                 }
-              : null
-          }
-          onStart={(m, s) => {
-            setRestMinutes(m);
-            setRestSeconds(s);
-          }}
-          onDismiss={() => setShowRestTimer(false)}
-        />
-      ) : null}
-    </div>
+                saving={savingSet}
+                onChange={(next) => setSetForm(next)}
+                onLog={addSet}
+              />
+            </>
+          ) : (
+            <p className="py-10 text-center font-body text-[13px] text-dim">
+              Add an exercise to start logging sets.
+            </p>
+          )}
+
+          {others.length > 0 ? (
+            <div className="mt-6 border-t border-line pt-4">
+              <div className="mb-3 font-body text-[9px] uppercase leading-none tracking-[.22em] text-dim">
+                Also this session
+              </div>
+              {others.map((e) => (
+                <div
+                  key={e.id}
+                  className="flex items-center gap-3 border-b border-line px-1 py-[11px] hover:bg-slab"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setActiveExerciseId(e.id)}
+                    className="flex-1 text-left font-body text-[14px] text-dim hover:text-ink"
+                  >
+                    {e.name}
+                  </button>
+                  <span className="font-body text-[11px] uppercase tracking-[.1em] text-dim">
+                    {e.sets.length} sets
+                  </span>
+                  <button
+                    type="button"
+                    aria-label={"Delete " + e.name}
+                    onClick={() => deleteExercise(e.id)}
+                    className="text-dim hover:text-danger"
+                  >
+                    <Icon.Trash size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={() => setPicking(true)}
+            className="mt-3.5 flex h-[46px] w-full items-center justify-center gap-2 border border-dashed border-line font-body text-[12px] font-semibold uppercase tracking-[.16em] text-accent hover:border-solid hover:bg-accent-soft"
+          >
+            <Icon.Plus size={15} />
+            Add exercise
+          </button>
+          <button
+            type="button"
+            onClick={handleFinish}
+            className="mb-1 mt-2.5 h-10 w-full font-body text-[11px] uppercase tracking-[.2em] text-dim hover:text-ink"
+          >
+            Finish workout
+          </button>
+        </div>
+      </div>
+      {restTimer}
+    </>
   );
 }

@@ -267,6 +267,35 @@ describe("WorkoutLogger", () => {
         await logSet();
         expect(screen.getByText("Resting")).toBeInTheDocument();
       });
+
+      it("stays up in the picker", async () => {
+        setup();
+        await start();
+        await addExercise("Bench Press");
+        await logSet("135");
+        fireEvent.click(btn("Add exercise"));
+        await screen.findByText("Add exercise");
+        expect(screen.getByText("Resting")).toBeInTheDocument();
+      });
+
+      describe("across a trip to the picker", () => {
+        beforeEach(() => vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] }));
+        afterEach(() => vi.useRealTimers());
+
+        it("keeps counting instead of starting over", async () => {
+          setup();
+          await start();
+          await addExercise("Bench Press");
+          await logSet("135");
+          act(() => vi.advanceTimersByTime(30_000));
+          expect(screen.getByText("02:00")).toBeInTheDocument();
+
+          await addExercise("Squat");
+          expect(screen.getByText("02:00")).toBeInTheDocument();
+          act(() => vi.advanceTimersByTime(10_000));
+          expect(screen.getByText("01:50")).toBeInTheDocument();
+        });
+      });
     });
 
     describe("deleting sets", () => {
