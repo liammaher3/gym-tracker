@@ -195,6 +195,17 @@ describe("WorkoutLogger", () => {
         expect(setRows()).toHaveLength(2);
       });
 
+      it("types each set's weight from scratch", async () => {
+        setup();
+        await start();
+        await addExercise("Bench Press");
+        await logSet("100");
+        await logSet("105");
+
+        expect(queriesFor("sets", "insert").map((q) => (q.payload as { weight: number }).weight)).toEqual([100, 105]);
+        expect(setRows().map((r) => r.split(" | ")[1])).toEqual(["100 lb × 10 reps", "105 lb × 10 reps"]);
+      });
+
       it("disables logging while the set saves", async () => {
         setup();
         await start();

@@ -84,6 +84,12 @@ export default function SetEntryPanel({
     onChange({ weight: last.weight, reps: last.reps });
   };
 
+  /** Logging ends the entry, so the next digit typed starts a new number. */
+  const log = () => {
+    setBuffer(null);
+    onLog();
+  };
+
   const display = (f: Field) => {
     const value = f === "weight" ? weight : reps;
     return buffer !== null && active === f ? buffer : String(value);
@@ -271,7 +277,7 @@ export default function SetEntryPanel({
           <button
             type="button"
             disabled={saving}
-            onClick={onLog}
+            onClick={log}
             className={primary + " mt-[9px] h-[54px] text-[17px]"}
           >
             {saving ? "Saving…" : "Log set " + setNumber}
@@ -282,7 +288,7 @@ export default function SetEntryPanel({
           <button
             type="button"
             disabled={saving}
-            onClick={onLog}
+            onClick={log}
             className={primary + " h-[58px] text-[18px]"}
           >
             {saving ? "Saving…" : "Log set " + setNumber}

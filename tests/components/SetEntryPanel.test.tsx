@@ -179,6 +179,13 @@ describe("SetEntryPanel", () => {
       setup({ saving: true });
       expect(btn("Saving…")).toBeDisabled();
     });
+
+    it("starts a fresh entry after logging", () => {
+      const { onChange } = setup();
+      press("1", "0", "0", "Log set 3", "1", "0", "5");
+      expect(weight()).toHaveTextContent("105");
+      expect(onChange).toHaveBeenLastCalledWith({ weight: 105, reps: 10 });
+    });
   });
 
   describe("hidden keypad", () => {
