@@ -163,7 +163,7 @@ export default function WorkoutViewer({ workout, onBack }: Props) {
   const created = new Date(workout.created_at);
 
   return (
-    <div className="grid-backdrop relative flex min-h-screen flex-col bg-ground text-ink">
+    <div className="relative flex min-h-screen flex-col bg-ground text-ink">
       <div className="relative flex-none border-b border-line px-[22px] pb-4 pt-2">
         <div className="flex items-center justify-between">
           <button

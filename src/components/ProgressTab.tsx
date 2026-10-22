@@ -128,7 +128,7 @@ export default function ProgressTab({ userId, refreshKey }: Props) {
   }
 
   return (
-    <div className="grid-backdrop relative flex min-h-screen flex-col bg-ground text-ink">
+    <div className="relative flex min-h-screen flex-col bg-ground text-ink">
       <div className="relative flex-none px-[22px] pb-3.5 pt-2.5">
         <div className="font-head text-[9px] uppercase leading-none tracking-[.32em] text-accent">
           Teretana

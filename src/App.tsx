@@ -70,7 +70,7 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="grid-backdrop relative grid min-h-screen place-items-center bg-ground">
+      <div className="relative grid min-h-screen place-items-center bg-ground">
         <p className="font-body text-[11px] uppercase tracking-[.24em] text-dim">
           Loading
         </p>

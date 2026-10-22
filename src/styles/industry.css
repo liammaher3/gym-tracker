@@ -17,7 +17,6 @@
   --on-accent: #080a0c;
   --danger: #5c2925;
   --success: #3a6b47;
-  --grid: rgba(148, 188, 227, 0.05);
   color-scheme: dark;
 }
 
@@ -33,7 +32,6 @@
   --on-accent: #f2f2f3;
   --danger: #8c4a43;
   --success: #4a8c5a;
-  --grid: rgba(29, 31, 32, 0.045);
   color-scheme: light;
 }
 
@@ -80,17 +78,6 @@ a:hover {
 /* Tabular numerals — every readout that changes uses this so digits don't jitter. */
 .tnum {
   font-variant-numeric: tabular-nums;
-}
-
-/* The blueprint grid behind every screen. */
-.grid-backdrop::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image:
-    repeating-linear-gradient(0deg, var(--grid) 0 1px, transparent 1px 34px),
-    repeating-linear-gradient(90deg, var(--grid) 0 1px, transparent 1px 34px);
 }
 
 /* Registration marks — rendered by <Blueprint>, styled here. */

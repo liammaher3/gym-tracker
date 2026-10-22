@@ -44,7 +44,7 @@ export default function WorkoutTab({
   }
 
   return (
-    <div className="grid-backdrop relative flex min-h-screen flex-col bg-ground text-ink">
+    <div className="relative flex min-h-screen flex-col bg-ground text-ink">
       <div className="relative flex items-start justify-between px-[22px] pt-2.5">
         <div>
           <div className="font-head text-[9px] uppercase leading-none tracking-[.32em] text-accent">

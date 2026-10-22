@@ -101,7 +101,7 @@ export default function ExercisePicker({ userId, onAdd, onCancel }: Props) {
   };
 
   return (
-    <div className="grid-backdrop relative flex min-h-screen flex-col bg-ground text-ink">
+    <div className="relative flex min-h-screen flex-col bg-ground text-ink">
       <div className="relative flex-none px-[22px] pb-4 pt-2">
         <div className="mb-4 flex items-center justify-between">
           <div className="font-head text-[26px] uppercase leading-none tracking-[.04em]">

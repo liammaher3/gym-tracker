@@ -158,7 +158,7 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
   /* ── pre-flight: name the workout ─────────────────────────────── */
   if (!workoutId) {
     return (
-      <div className="grid-backdrop relative flex min-h-screen flex-col bg-ground text-ink">
+      <div className="relative flex min-h-screen flex-col bg-ground text-ink">
         <div className="relative flex-none border-b border-line px-[22px] pb-3.5 pt-2">
           <button
             type="button"
@@ -217,7 +217,7 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
 
   /* ── the logger ───────────────────────────────────────────────── */
   return (
-    <div className="grid-backdrop relative flex min-h-screen flex-col bg-ground text-ink">
+    <div className="relative flex min-h-screen flex-col bg-ground text-ink">
       <header className="relative flex flex-none items-center justify-between border-b border-line px-[22px] pb-3.5 pt-2">
         <div className="flex items-center gap-3">
           <button
