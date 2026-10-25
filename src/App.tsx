@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./lib/supabaseClient";
+import { loadActiveWorkout } from "./lib/activeWorkout";
 import type { Workout } from "./types";
 import AuthPage from "./components/Auth";
 import BottomNav, { type Tab } from "./components/BottomNav";
@@ -23,6 +24,9 @@ export default function App() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      // Straight back into a session that was live when the page was
+      // reloaded (e.g. iOS evicting the app while the phone was locked).
+      if (session && loadActiveWorkout(session.user.id)) setLogging(true);
       setLoading(false);
     });
     const {

@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import {
+  clearActiveWorkout,
+  loadActiveWorkout,
+  saveActiveWorkout,
+} from "../lib/activeWorkout";
 import type { Exercise, WorkoutSet } from "../types";
 import WorkoutTimer from "./WorkoutTimer";
 import RestTimer from "./RestTimer";
@@ -17,12 +22,23 @@ type Props = {
 type ExerciseWithSets = Exercise & { sets: WorkoutSet[] };
 
 export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
-  const [workoutId, setWorkoutId] = useState<string | null>(null);
-  const [workoutName, setWorkoutName] = useState("");
+  // A session left running before a reload (or a Back to the home screen)
+  // picks up where it was; its exercises and sets are fetched below.
+  const [saved] = useState(() => loadActiveWorkout(userId));
+  const [resuming, setResuming] = useState(saved !== null);
+  const [resumeFailed, setResumeFailed] = useState(false);
+  const [resumeAttempt, setResumeAttempt] = useState(0);
+
+  const [workoutId, setWorkoutId] = useState<string | null>(
+    saved?.workoutId ?? null,
+  );
+  const [workoutName, setWorkoutName] = useState(saved?.name ?? "");
   const [starting, setStarting] = useState(false);
 
   const [exercises, setExercises] = useState<ExerciseWithSets[]>([]);
-  const [activeExerciseId, setActiveExerciseId] = useState<string | null>(null);
+  const [activeExerciseId, setActiveExerciseId] = useState<string | null>(
+    saved?.activeExerciseId ?? null,
+  );
   const [picking, setPicking] = useState(false);
 
   const [setForm, setSetForm] = useState({ reps: 10, weight: 0 });
@@ -35,9 +51,91 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
   // Bumped on every logged set to remount the rest timer, restarting it.
   const [restKey, setRestKey] = useState(0);
 
-  const [startTime, setStartTime] = useState<number | null>(null);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [startTime, setStartTime] = useState<number | null>(
+    saved?.startTime ?? null,
+  );
+  const [elapsedSeconds, setElapsedSeconds] = useState(() =>
+    saved ? Math.floor((Date.now() - saved.startTime) / 1000) : 0,
+  );
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (!saved || !resuming) return;
+    let cancelled = false;
+    const load = async () => {
+      const { data: workout, error: workoutError } = await supabase
+        .from("workouts")
+        .select("id")
+        .eq("id", saved.workoutId)
+        .single();
+      if (cancelled) return;
+      // PGRST116 is "no rows": the workout was deleted from History. Any
+      // other error is likely just a dropped connection — keep the session.
+      if (workoutError && workoutError.code !== "PGRST116") {
+        console.error(workoutError);
+        setResumeFailed(true);
+        return;
+      }
+      if (!workout) {
+        clearActiveWorkout();
+        setWorkoutId(null);
+        setStartTime(null);
+        setWorkoutName("");
+        setActiveExerciseId(null);
+        setResuming(false);
+        return;
+      }
+
+      const { data: exerciseData, error: exerciseError } = await supabase
+        .from("exercises")
+        .select("*")
+        .eq("workout_id", saved.workoutId)
+        .order("created_at", { ascending: true });
+      if (cancelled) return;
+      if (exerciseError) {
+        console.error(exerciseError);
+        setResumeFailed(true);
+        return;
+      }
+      const ids = (exerciseData ?? []).map((e) => e.id);
+      const { data: setData, error: setError } = await supabase
+        .from("sets")
+        .select("*")
+        .in("exercise_id", ids.length > 0 ? ids : [""])
+        .order("set_number", { ascending: true });
+      if (cancelled) return;
+      if (setError) {
+        console.error(setError);
+        setResumeFailed(true);
+        return;
+      }
+      setExercises(
+        (exerciseData ?? []).map((ex) => ({
+          ...ex,
+          sets: (setData ?? []).filter((s) => s.exercise_id === ex.id),
+        })),
+      );
+      setActiveExerciseId((id) =>
+        id && ids.includes(id) ? id : (ids.at(-1) ?? null),
+      );
+      setResuming(false);
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [saved, resuming, resumeAttempt]);
+
+  useEffect(() => {
+    if (resuming || !workoutId || !startTime) return;
+    saveActiveWorkout({
+      userId,
+      workoutId,
+      startTime,
+      name: workoutName,
+      activeExerciseId,
+    });
+  }, [resuming, userId, workoutId, startTime, workoutName, activeExerciseId]);
 
   useEffect(() => {
     if (workoutId && startTime) {
@@ -77,6 +175,7 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
         .eq("id", workoutId);
       if (error) console.error("Duration save error:", error);
     }
+    clearActiveWorkout();
     onFinish();
   };
 
@@ -154,6 +253,42 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
     setRestKey((k) => k + 1);
     setShowRestTimer(true);
   };
+
+  /* ── reloading a session left running ─────────────────────────── */
+  if (resuming) {
+    return (
+      <div className="relative flex min-h-screen flex-col items-center justify-center bg-ground px-[22px] pb-24 text-ink">
+        {resumeFailed ? (
+          <>
+            <p className="text-center font-body text-[13px] text-dim">
+              Couldn't load your workout. Check your connection.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setResumeFailed(false);
+                setResumeAttempt((n) => n + 1);
+              }}
+              className="mt-5 h-[46px] w-full bg-accent font-head text-[15px] uppercase tracking-[.16em] text-on-accent hover:bg-accent-hot"
+            >
+              Retry
+            </button>
+            <button
+              type="button"
+              onClick={onBack}
+              className="mt-2.5 h-10 w-full font-body text-[11px] uppercase tracking-[.2em] text-dim hover:text-ink"
+            >
+              Back
+            </button>
+          </>
+        ) : (
+          <p className="font-body text-[11px] uppercase tracking-[.24em] text-dim">
+            Resuming…
+          </p>
+        )}
+      </div>
+    );
+  }
 
   /* ── pre-flight: name the workout ─────────────────────────────── */
   if (!workoutId) {

@@ -8,6 +8,12 @@ import {
   resetSupabase,
 } from "../helpers/supabase";
 import WorkoutLogger from "../../src/components/WorkoutLogger";
+import {
+  type ActiveWorkout,
+  loadActiveWorkout,
+  saveActiveWorkout,
+} from "../../src/lib/activeWorkout";
+import { exercise, set } from "../helpers/fixtures";
 
 vi.mock("../../src/lib/supabaseClient", async () => (await import("../helpers/supabase")).supabaseModule);
 
@@ -424,6 +430,140 @@ describe("WorkoutLogger", () => {
       expect(vi.getTimerCount()).toBe(1);
       unmount();
       expect(vi.getTimerCount()).toBe(0);
+    });
+  });
+
+  describe("surviving a reload", () => {
+    const saveSession = (overrides: Partial<ActiveWorkout> = {}) =>
+      saveActiveWorkout({
+        userId: "user-1",
+        workoutId: "w1",
+        startTime: Date.now() - 15 * 60_000,
+        name: "Push day",
+        activeExerciseId: "e1",
+        ...overrides,
+      });
+
+    function savedWorkout() {
+      on("workouts", "select", { data: { id: "w1" } });
+      on("exercises", "select", {
+        data: [exercise({ id: "e1", name: "Bench Press" }), exercise({ id: "e2", name: "Squat" })],
+      });
+      on("sets", "select", {
+        data: [
+          set({ id: "s1", exercise_id: "e1", set_number: 1, weight: 135 }),
+          set({ id: "s2", exercise_id: "e1", set_number: 2, weight: 145 }),
+          set({ id: "s3", exercise_id: "e2", set_number: 1, weight: 225 }),
+        ],
+      });
+    }
+
+    it("remembers the live session and forgets it on finish", async () => {
+      const { onFinish } = setup();
+      await start("Legs");
+      expect(loadActiveWorkout("user-1")).toMatchObject({ workoutId: "w1", name: "Legs", activeExerciseId: null });
+
+      await addExercise("Squat");
+      expect(loadActiveWorkout("user-1")?.activeExerciseId).toBe("ex1");
+
+      fireEvent.click(btn("Finish workout"));
+      await vi.waitFor(() => expect(onFinish).toHaveBeenCalledOnce());
+      expect(loadActiveWorkout("user-1")).toBeNull();
+    });
+
+    it("keeps the session when going back to the home screen", async () => {
+      const { onBack } = setup();
+      await start();
+      fireEvent.click(btn("Back"));
+      expect(onBack).toHaveBeenCalledOnce();
+      expect(loadActiveWorkout("user-1")).not.toBeNull();
+    });
+
+    describe("with the clock", () => {
+      beforeEach(() => vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] }));
+      afterEach(() => vi.useRealTimers());
+
+      it("picks up where it left off, clock and all", async () => {
+        saveSession();
+        savedWorkout();
+        setup();
+
+        expect(screen.getByText("Resuming…")).toBeInTheDocument();
+        await screen.findByText("Session live");
+        expect(screen.getByText("Push day")).toBeInTheDocument();
+        expect(screen.getByText("15:00")).toBeInTheDocument();
+        expect(screen.getByText("Bench Press")).toBeInTheDocument();
+        expect(setRows().map((r) => r.split(" | ")[1])).toEqual(["135 lb × 10 reps", "145 lb × 10 reps"]);
+        expect(btn("Log set 3")).toBeInTheDocument();
+        expect(screen.getByText("Squat")).toBeInTheDocument();
+        expect(queriesFor("workouts", "insert")).toHaveLength(0);
+
+        const [exercises] = queriesFor("exercises", "select");
+        expect(filterValue(exercises, "eq", "workout_id")).toBe("w1");
+        const [sets] = queriesFor("sets", "select");
+        expect(filterValue(sets, "in", "exercise_id")).toEqual(["e1", "e2"]);
+
+        act(() => vi.advanceTimersByTime(5_000));
+        expect(screen.getByText("15:05")).toBeInTheDocument();
+      });
+
+      it("saves the full duration on finish", async () => {
+        saveSession();
+        savedWorkout();
+        const { onFinish } = setup();
+        await screen.findByText("Session live");
+
+        fireEvent.click(btn("Finish workout"));
+        await vi.waitFor(() => expect(onFinish).toHaveBeenCalledOnce());
+        expect(queriesFor("workouts", "update")[0].payload).toEqual({ duration_seconds: 900 });
+      });
+    });
+
+    it("falls back to the last exercise if the active one is gone", async () => {
+      saveSession({ activeExerciseId: "deleted" });
+      savedWorkout();
+      setup();
+      await screen.findByText("Session live");
+      expect(btn("Log set 2")).toBeInTheDocument(); // Squat has one set
+    });
+
+    it("starts fresh if the workout was deleted", async () => {
+      saveSession();
+      setup();
+      expect(await screen.findByText("New workout")).toBeInTheDocument();
+      expect(loadActiveWorkout("user-1")).toBeNull();
+    });
+
+    it("offers a retry if the workout cannot be loaded", async () => {
+      const error = silenceErrors();
+      saveSession();
+      savedWorkout();
+      on("exercises", "select", { error: { message: "offline" } });
+      const { onBack } = setup();
+
+      expect(await screen.findByText(/Couldn't load your workout/)).toBeInTheDocument();
+      expect(error).toHaveBeenCalledWith({ message: "offline" });
+      expect(loadActiveWorkout("user-1")).not.toBeNull();
+
+      savedWorkout();
+      fireEvent.click(btn("Retry"));
+      await screen.findByText("Session live");
+      expect(onBack).not.toHaveBeenCalled();
+    });
+
+    it("keeps the session if the server is unreachable", async () => {
+      silenceErrors();
+      saveSession();
+      on("workouts", "select", { error: { message: "Failed to fetch" } });
+      setup();
+      expect(await screen.findByText(/Couldn't load your workout/)).toBeInTheDocument();
+      expect(loadActiveWorkout("user-1")).not.toBeNull();
+    });
+
+    it("ignores another user's session", async () => {
+      saveSession({ userId: "user-2" });
+      setup();
+      expect(screen.getByText("New workout")).toBeInTheDocument();
     });
   });
 });

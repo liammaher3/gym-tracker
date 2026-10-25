@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../src/App";
+import { saveActiveWorkout } from "../src/lib/activeWorkout";
 import { daysAgo, workout } from "./helpers/fixtures";
 import { setColorScheme } from "./helpers/matchMedia";
 import {
@@ -163,6 +164,22 @@ describe("App", () => {
       nav("Workout");
       expect(shown("Session live")).toBe(true);
     });
+  });
+
+  it("reopens straight into a workout that was live before a reload", async () => {
+    saveActiveWorkout({
+      userId: "user-1",
+      workoutId: "w-live",
+      startTime: Date.now() - 60_000,
+      name: "Push day",
+      activeExerciseId: null,
+    });
+    on("workouts", "select", (q) => ({ data: q.single ? { id: "w-live" } : [] }));
+    setSession(makeSession("user-1"));
+    render(<App />);
+    await screen.findByText("Session live");
+    expect(screen.getByText("Push day")).toBeInTheDocument();
+    expect(queriesFor("workouts", "insert")).toHaveLength(0);
   });
 
   it("returns home and refreshes stats after finishing a workout", async () => {

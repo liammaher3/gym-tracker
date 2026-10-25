@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { resetSupabase } from "../helpers/supabase";
 import WorkoutTab from "../../src/components/WorkoutTab";
+import { saveActiveWorkout } from "../../src/lib/activeWorkout";
 
 vi.mock("../../src/lib/supabaseClient", async () => (await import("../helpers/supabase")).supabaseModule);
 
@@ -82,5 +83,13 @@ describe("WorkoutTab", () => {
       fireEvent.click(screen.getByRole("button", { name: "Back" }));
       expect(setLogging).toHaveBeenCalledExactlyOnceWith(false);
     });
+  });
+
+  it("offers to resume a session that is still running", () => {
+    saveActiveWorkout({ userId: "user-1", workoutId: "w1", startTime: Date.now(), name: "", activeExerciseId: null });
+    const { setLogging } = setup();
+    expect(screen.getByText("Session running")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Resume workout" }));
+    expect(setLogging).toHaveBeenCalledExactlyOnceWith(true);
   });
 });

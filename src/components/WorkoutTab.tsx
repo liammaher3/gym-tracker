@@ -1,3 +1,4 @@
+import { loadActiveWorkout } from "../lib/activeWorkout";
 import Blueprint from "./ui/Blueprint";
 import { Icon } from "./ui/Icons";
 import WorkoutLogger from "./WorkoutLogger";
@@ -33,6 +34,8 @@ export default function WorkoutTab({
   onSignOut,
   stats,
 }: Props) {
+  const resumable = loadActiveWorkout(userId) !== null;
+
   if (logging) {
     return (
       <WorkoutLogger
@@ -68,12 +71,22 @@ export default function WorkoutTab({
         <Blueprint className="flex w-full flex-col items-center px-6 pb-[30px] pt-[38px]">
           <Icon.Dumbbell size={54} className="text-accent" />
           <div className="mt-5 font-head text-[26px] uppercase leading-tight tracking-[.06em]">
-            Ready to train
+            {resumable ? "Session running" : "Ready to train"}
           </div>
           <div className="mt-1.5 text-center font-body text-[13px] leading-[1.5] text-dim">
-            Nothing logged today.
-            <br />
-            Start a session and the clock runs.
+            {resumable ? (
+              <>
+                Your workout is still on the clock.
+                <br />
+                Pick up where you left off.
+              </>
+            ) : (
+              <>
+                Nothing logged today.
+                <br />
+                Start a session and the clock runs.
+              </>
+            )}
           </div>
           <button
             type="button"
@@ -81,7 +94,7 @@ export default function WorkoutTab({
             className="mt-[26px] flex h-[54px] w-full items-center justify-center gap-2.5 bg-accent font-head text-[17px] uppercase tracking-[.16em] text-on-accent hover:bg-accent-hot"
           >
             <Icon.Plus size={18} />
-            Start workout
+            {resumable ? "Resume workout" : "Start workout"}
           </button>
         </Blueprint>
 

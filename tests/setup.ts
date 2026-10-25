@@ -29,5 +29,6 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  localStorage.clear();
   document.documentElement.removeAttribute("data-theme");
 });
