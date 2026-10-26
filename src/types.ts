@@ -22,3 +22,5 @@ export type WorkoutSet = {
   weight: number;
   created_at: string;
 };
+
+export type ExerciseWithSets = Exercise & { sets: WorkoutSet[] };

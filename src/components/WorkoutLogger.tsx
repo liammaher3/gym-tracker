@@ -1,11 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
-import {
-  clearActiveWorkout,
-  loadActiveWorkout,
-  saveActiveWorkout,
-} from "../lib/activeWorkout";
-import type { Exercise, WorkoutSet } from "../types";
+import type { ActiveWorkout } from "../lib/activeWorkout";
+import { fetchWorkoutWithExercises } from "../lib/workouts";
+import type { ExerciseWithSets } from "../types";
 import WorkoutTimer from "./WorkoutTimer";
 import RestTimer from "./RestTimer";
 import ExercisePicker from "./ExercisePicker";
@@ -15,16 +12,25 @@ import { Icon } from "./ui/Icons";
 
 type Props = {
   userId: string;
+  /** The session left running, if any, as it stood when the logger opened. */
+  saved: ActiveWorkout | null;
+  /** Persist the live session's pointer, or forget it with null. */
+  onSessionChange: (workout: ActiveWorkout | null) => void;
   onFinish: () => void;
   onBack: () => void;
 };
 
-type ExerciseWithSets = Exercise & { sets: WorkoutSet[] };
-
-export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
+export default function WorkoutLogger({
+  userId,
+  saved: savedProp,
+  onSessionChange,
+  onFinish,
+  onBack,
+}: Props) {
   // A session left running before a reload (or a Back to the home screen)
-  // picks up where it was; its exercises and sets are fetched below.
-  const [saved] = useState(() => loadActiveWorkout(userId));
+  // picks up where it was; its exercises and sets are fetched below. Only the
+  // value at mount counts — the prop then tracks this logger's own saves.
+  const [saved] = useState(savedProp);
   const [resuming, setResuming] = useState(saved !== null);
   const [resumeFailed, setResumeFailed] = useState(false);
   const [resumeAttempt, setResumeAttempt] = useState(0);
@@ -59,83 +65,66 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
   );
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Drop the saved session and fall through to the pre-flight screen. The
+  // workout itself, if it still exists, stays in History.
+  const startFresh = () => {
+    onSessionChange(null);
+    setWorkoutId(null);
+    setStartTime(null);
+    setWorkoutName("");
+    setActiveExerciseId(null);
+    setResumeFailed(false);
+    setResuming(false);
+  };
+
   useEffect(() => {
     if (!saved || !resuming) return;
     let cancelled = false;
-    const load = async () => {
-      const { data: workout, error: workoutError } = await supabase
-        .from("workouts")
-        .select("id")
-        .eq("id", saved.workoutId)
-        .single();
+    fetchWorkoutWithExercises(saved.workoutId).then(({ data, error }) => {
       if (cancelled) return;
       // PGRST116 is "no rows": the workout was deleted from History. Any
       // other error is likely just a dropped connection — keep the session.
-      if (workoutError && workoutError.code !== "PGRST116") {
-        console.error(workoutError);
+      if (error?.code === "PGRST116") return startFresh();
+      if (error || !data) {
+        console.error(error);
         setResumeFailed(true);
         return;
       }
-      if (!workout) {
-        clearActiveWorkout();
-        setWorkoutId(null);
-        setStartTime(null);
-        setWorkoutName("");
-        setActiveExerciseId(null);
-        setResuming(false);
-        return;
-      }
-
-      const { data: exerciseData, error: exerciseError } = await supabase
-        .from("exercises")
-        .select("*")
-        .eq("workout_id", saved.workoutId)
-        .order("created_at", { ascending: true });
-      if (cancelled) return;
-      if (exerciseError) {
-        console.error(exerciseError);
-        setResumeFailed(true);
-        return;
-      }
-      const ids = (exerciseData ?? []).map((e) => e.id);
-      const { data: setData, error: setError } = await supabase
-        .from("sets")
-        .select("*")
-        .in("exercise_id", ids.length > 0 ? ids : [""])
-        .order("set_number", { ascending: true });
-      if (cancelled) return;
-      if (setError) {
-        console.error(setError);
-        setResumeFailed(true);
-        return;
-      }
-      setExercises(
-        (exerciseData ?? []).map((ex) => ({
-          ...ex,
-          sets: (setData ?? []).filter((s) => s.exercise_id === ex.id),
-        })),
-      );
+      const ids = data.exercises.map((e) => e.id);
+      // The server's name wins over the saved copy: it may have been renamed
+      // from History since.
+      setWorkoutName(data.name ?? "");
+      setExercises(data.exercises);
       setActiveExerciseId((id) =>
         id && ids.includes(id) ? id : (ids.at(-1) ?? null),
       );
       setResuming(false);
-    };
-    load();
+    });
     return () => {
       cancelled = true;
     };
+    // startFresh only calls setters and the stable onSessionChange.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saved, resuming, resumeAttempt]);
 
   useEffect(() => {
     if (resuming || !workoutId || !startTime) return;
-    saveActiveWorkout({
+    onSessionChange({
       userId,
       workoutId,
       startTime,
       name: workoutName,
       activeExerciseId,
     });
-  }, [resuming, userId, workoutId, startTime, workoutName, activeExerciseId]);
+  }, [
+    resuming,
+    userId,
+    workoutId,
+    startTime,
+    workoutName,
+    activeExerciseId,
+    onSessionChange,
+  ]);
 
   useEffect(() => {
     if (workoutId && startTime) {
@@ -175,7 +164,7 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
         .eq("id", workoutId);
       if (error) console.error("Duration save error:", error);
     }
-    clearActiveWorkout();
+    onSessionChange(null);
     onFinish();
   };
 
@@ -272,6 +261,13 @@ export default function WorkoutLogger({ userId, onFinish, onBack }: Props) {
               className="mt-5 h-[46px] w-full bg-accent font-head text-[15px] uppercase tracking-[.16em] text-on-accent hover:bg-accent-hot"
             >
               Retry
+            </button>
+            <button
+              type="button"
+              onClick={startFresh}
+              className="mt-2.5 h-[46px] w-full border border-line font-body text-[12px] font-semibold uppercase tracking-[.16em] text-dim hover:border-accent hover:text-accent"
+            >
+              Start new workout
             </button>
             <button
               type="button"

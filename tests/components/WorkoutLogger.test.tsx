@@ -10,6 +10,7 @@ import {
 import WorkoutLogger from "../../src/components/WorkoutLogger";
 import {
   type ActiveWorkout,
+  clearActiveWorkout,
   loadActiveWorkout,
   saveActiveWorkout,
 } from "../../src/lib/activeWorkout";
@@ -34,7 +35,17 @@ function setup() {
   on("sets", "insert", (q) => ({ data: { id: nextId("set"), ...(q.payload as object) } }));
   const onFinish = vi.fn();
   const onBack = vi.fn();
-  const { unmount } = render(<WorkoutLogger userId="user-1" onFinish={onFinish} onBack={onBack} />);
+  // Write through to localStorage, as App does.
+  const onSessionChange = (w: ActiveWorkout | null) => (w ? saveActiveWorkout(w) : clearActiveWorkout());
+  const { unmount } = render(
+    <WorkoutLogger
+      userId="user-1"
+      saved={loadActiveWorkout("user-1")}
+      onSessionChange={onSessionChange}
+      onFinish={onFinish}
+      onBack={onBack}
+    />,
+  );
   return { onFinish, onBack, unmount };
 }
 
@@ -444,19 +455,25 @@ describe("WorkoutLogger", () => {
         ...overrides,
       });
 
-    function savedWorkout() {
-      on("workouts", "select", { data: { id: "w1" } });
-      on("exercises", "select", {
-        data: [exercise({ id: "e1", name: "Bench Press" }), exercise({ id: "e2", name: "Squat" })],
-      });
-      on("sets", "select", {
-        data: [
-          set({ id: "s1", exercise_id: "e1", set_number: 1, weight: 135 }),
-          set({ id: "s2", exercise_id: "e1", set_number: 2, weight: 145 }),
-          set({ id: "s3", exercise_id: "e2", set_number: 1, weight: 225 }),
-        ],
-      });
+    function savedWorkout(
+      exercises = [
+        {
+          ...exercise({ id: "e1", name: "Bench Press" }),
+          sets: [
+            set({ id: "s1", exercise_id: "e1", set_number: 1, weight: 135 }),
+            set({ id: "s2", exercise_id: "e1", set_number: 2, weight: 145 }),
+          ],
+        },
+        {
+          ...exercise({ id: "e2", name: "Squat" }),
+          sets: [set({ id: "s3", exercise_id: "e2", set_number: 1, weight: 225 })],
+        },
+      ],
+    ) {
+      on("workouts", "select", { data: { id: "w1", name: "Push day", exercises } });
     }
+
+    const notFound = { error: { code: "PGRST116", message: "no rows" } };
 
     it("remembers the live session and forgets it on finish", async () => {
       const { onFinish } = setup();
@@ -498,10 +515,12 @@ describe("WorkoutLogger", () => {
         expect(screen.getByText("Squat")).toBeInTheDocument();
         expect(queriesFor("workouts", "insert")).toHaveLength(0);
 
-        const [exercises] = queriesFor("exercises", "select");
-        expect(filterValue(exercises, "eq", "workout_id")).toBe("w1");
-        const [sets] = queriesFor("sets", "select");
-        expect(filterValue(sets, "in", "exercise_id")).toEqual(["e1", "e2"]);
+        const [load] = queriesFor("workouts", "select");
+        expect(load.columns).toBe("id, name, exercises(*, sets(*))");
+        expect(filterValue(load, "eq", "id")).toBe("w1");
+        expect(load.single).toBe(true);
+        expect(queriesFor("exercises")).toHaveLength(0);
+        expect(queriesFor("sets")).toHaveLength(0);
 
         act(() => vi.advanceTimersByTime(5_000));
         expect(screen.getByText("15:05")).toBeInTheDocument();
@@ -527,8 +546,27 @@ describe("WorkoutLogger", () => {
       expect(btn("Log set 2")).toBeInTheDocument(); // Squat has one set
     });
 
+    it("resumes a workout that has no exercises yet", async () => {
+      saveSession({ activeExerciseId: null });
+      savedWorkout([]);
+      setup();
+      await screen.findByText("Session live");
+      expect(screen.getByText("Add an exercise to start logging sets.")).toBeInTheDocument();
+      expect(loadActiveWorkout("user-1")).not.toBeNull();
+    });
+
+    it("takes the workout's current name from the server", async () => {
+      saveSession({ name: "Push day" });
+      on("workouts", "select", { data: { id: "w1", name: "Chest & tris", exercises: [] } });
+      setup();
+      await screen.findByText("Session live");
+      expect(screen.getByText("Chest & tris")).toBeInTheDocument();
+      expect(loadActiveWorkout("user-1")?.name).toBe("Chest & tris");
+    });
+
     it("starts fresh if the workout was deleted", async () => {
       saveSession();
+      on("workouts", "select", notFound);
       setup();
       expect(await screen.findByText("New workout")).toBeInTheDocument();
       expect(loadActiveWorkout("user-1")).toBeNull();
@@ -537,8 +575,7 @@ describe("WorkoutLogger", () => {
     it("offers a retry if the workout cannot be loaded", async () => {
       const error = silenceErrors();
       saveSession();
-      savedWorkout();
-      on("exercises", "select", { error: { message: "offline" } });
+      on("workouts", "select", { error: { message: "offline" } });
       const { onBack } = setup();
 
       expect(await screen.findByText(/Couldn't load your workout/)).toBeInTheDocument();
@@ -548,6 +585,20 @@ describe("WorkoutLogger", () => {
       savedWorkout();
       fireEvent.click(btn("Retry"));
       await screen.findByText("Session live");
+      expect(onBack).not.toHaveBeenCalled();
+    });
+
+    it("can drop a session that will not load and start a new one", async () => {
+      silenceErrors();
+      saveSession();
+      on("workouts", "select", { error: { code: "22P02", message: "invalid uuid" } });
+      const { onBack } = setup();
+      await screen.findByText(/Couldn't load your workout/);
+
+      fireEvent.click(btn("Start new workout"));
+      expect(screen.getByText("New workout")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Push day")).toHaveValue("");
+      expect(loadActiveWorkout("user-1")).toBeNull();
       expect(onBack).not.toHaveBeenCalled();
     });
 

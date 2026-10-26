@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../src/App";
-import { saveActiveWorkout } from "../src/lib/activeWorkout";
+import { loadActiveWorkout, saveActiveWorkout } from "../src/lib/activeWorkout";
 import { daysAgo, workout } from "./helpers/fixtures";
 import { setColorScheme } from "./helpers/matchMedia";
 import {
@@ -174,12 +174,44 @@ describe("App", () => {
       name: "Push day",
       activeExerciseId: null,
     });
-    on("workouts", "select", (q) => ({ data: q.single ? { id: "w-live" } : [] }));
+    on("workouts", "select", (q) => ({
+      data: q.single ? { id: "w-live", name: "Push day", exercises: [] } : [],
+    }));
     setSession(makeSession("user-1"));
     render(<App />);
     await screen.findByText("Session live");
     expect(screen.getByText("Push day")).toBeInTheDocument();
     expect(queriesFor("workouts", "insert")).toHaveLength(0);
+  });
+
+  it("opens on the home screen when the saved workout is over 12 hours old", async () => {
+    saveActiveWorkout({
+      userId: "user-1",
+      workoutId: "w-old",
+      startTime: Date.now() - 3 * 864e5,
+      name: "Push day",
+      activeExerciseId: null,
+    });
+    setSession(makeSession("user-1"));
+    render(<App />);
+    await screen.findByText("Ready to train");
+    expect(screen.queryByText("Session live")).toBeNull();
+    expect(loadActiveWorkout("user-1")).toBeNull();
+  });
+
+  it("discards a running session from the home screen", async () => {
+    on("workouts", "insert", { data: { id: "w-live" } });
+    await signedIn();
+    fireEvent.click(screen.getByRole("button", { name: "Start workout" }));
+    fireEvent.click(screen.getByRole("button", { name: "Start workout" }));
+    await screen.findByText("Session live");
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+
+    await screen.findByText("Session running");
+    fireEvent.click(screen.getByRole("button", { name: "Discard session" }));
+    expect(screen.getByText("Ready to train")).toBeInTheDocument();
+    expect(loadActiveWorkout("user-1")).toBeNull();
+    expect(queriesFor("workouts", "delete")).toHaveLength(0);
   });
 
   it("returns home and refreshes stats after finishing a workout", async () => {

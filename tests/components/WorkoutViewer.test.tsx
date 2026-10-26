@@ -18,11 +18,15 @@ const sets: WorkoutSet[] = [
   set({ id: "s4", exercise_id: "e2", set_number: 1, weight: 225, reps: 5 }),
 ];
 
+/** The workout row with exercises and their sets embedded, as PostgREST returns it. */
+const nested = (ex = exercises, st = sets) => ({
+  id: "w1",
+  name: null,
+  exercises: ex.map((e) => ({ ...e, sets: st.filter((s) => s.exercise_id === e.id) })),
+});
+
 function serve(ex = exercises, st = sets) {
-  on("exercises", "select", { data: ex });
-  on("sets", "select", (q) => ({
-    data: st.filter((s) => (filterValue(q, "in", "exercise_id") as string[]).includes(s.exercise_id)),
-  }));
+  on("workouts", "select", { data: nested(ex, st) });
 }
 
 async function setup(w: Workout = workout({ duration_seconds: 3900 })) {
@@ -51,14 +55,15 @@ describe("WorkoutViewer", () => {
   });
 
   describe("viewing", () => {
-    it("loads the workout's exercises in order, then their sets", async () => {
+    it("loads the exercises in order, with their sets, in one query", async () => {
       await setup();
-      const [exQ] = queriesFor("exercises", "select");
-      expect(filterValue(exQ, "eq", "workout_id")).toBe("w1");
-      expect(filterValue(exQ, "order", "created_at")).toEqual({ ascending: true });
-      const [setQ] = queriesFor("sets", "select");
-      expect(filterValue(setQ, "in", "exercise_id")).toEqual(["e1", "e2"]);
-      expect(filterValue(setQ, "order", "set_number")).toEqual({ ascending: true });
+      const [q] = queriesFor("workouts", "select");
+      expect(q.columns).toBe("id, name, exercises(*, sets(*))");
+      expect(filterValue(q, "eq", "id")).toBe("w1");
+      expect(filterValue(q, "order", "created_at")).toEqual({ referencedTable: "exercises", ascending: true });
+      expect(filterValue(q, "order", "set_number")).toEqual({ referencedTable: "exercises.sets", ascending: true });
+      expect(queriesFor("exercises")).toHaveLength(0);
+      expect(queriesFor("sets")).toHaveLength(0);
     });
 
     it("shows each exercise with its sets", async () => {
@@ -107,16 +112,15 @@ describe("WorkoutViewer", () => {
       expect(stat("Duration")).toHaveTextContent(text);
     });
 
-    it("says when nothing was logged, without querying a set list", async () => {
+    it("says when nothing was logged", async () => {
       serve([], []);
       await setup();
       expect(screen.getByText("No exercises logged for this workout.")).toBeInTheDocument();
-      expect(filterValue(queriesFor("sets", "select")[0], "in", "exercise_id")).toEqual([""]);
     });
 
-    it.each(["exercises", "sets"])("logs a failed %s load and shows nothing", async (table) => {
+    it("logs a failed load and shows nothing", async () => {
       const error = silenceErrors();
-      on(table, "select", { error: { message: "offline" } });
+      on("workouts", "select", { error: { message: "offline" } });
       await setup();
       expect(error).toHaveBeenCalledWith({ message: "offline" });
       expect(screen.getByText("No exercises logged for this workout.")).toBeInTheDocument();
@@ -161,10 +165,10 @@ describe("WorkoutViewer", () => {
   describe("editing", () => {
     it("is unavailable until the exercises load", async () => {
       const pending = deferred();
-      on("exercises", "select", pending.promise);
+      on("workouts", "select", pending.promise);
       render(<WorkoutViewer workout={workout()} onBack={() => {}} />);
       expect(btn("Edit workout")).toBeDisabled();
-      await act(async () => pending.resolve({ data: exercises }));
+      await act(async () => pending.resolve({ data: nested() }));
       await vi.waitFor(() => expect(btn("Edit workout")).toBeEnabled());
     });
 

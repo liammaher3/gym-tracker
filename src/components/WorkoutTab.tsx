@@ -1,4 +1,4 @@
-import { loadActiveWorkout } from "../lib/activeWorkout";
+import type { ActiveWorkout } from "../lib/activeWorkout";
 import Blueprint from "./ui/Blueprint";
 import { Icon } from "./ui/Icons";
 import WorkoutLogger from "./WorkoutLogger";
@@ -7,6 +7,10 @@ type Props = {
   userId: string;
   logging: boolean;
   setLogging: (value: boolean) => void;
+  /** The session left running, if any. */
+  activeWorkout: ActiveWorkout | null;
+  /** Persist the live session's pointer, or forget it with null. */
+  onActiveWorkoutChange: (workout: ActiveWorkout | null) => void;
   onSignOut: () => void;
   /** Optional summary strip; pass nulls and the cells read "—". */
   stats?: {
@@ -31,20 +35,24 @@ export default function WorkoutTab({
   userId,
   logging,
   setLogging,
+  activeWorkout,
+  onActiveWorkoutChange,
   onSignOut,
   stats,
 }: Props) {
-  const resumable = loadActiveWorkout(userId) !== null;
-
   if (logging) {
     return (
       <WorkoutLogger
         userId={userId}
+        saved={activeWorkout}
+        onSessionChange={onActiveWorkoutChange}
         onFinish={() => setLogging(false)}
         onBack={() => setLogging(false)}
       />
     );
   }
+
+  const resumable = activeWorkout !== null;
 
   return (
     <div className="relative flex min-h-screen flex-col bg-ground text-ink">
@@ -96,6 +104,15 @@ export default function WorkoutTab({
             <Icon.Plus size={18} />
             {resumable ? "Resume workout" : "Start workout"}
           </button>
+          {resumable ? (
+            <button
+              type="button"
+              onClick={() => onActiveWorkoutChange(null)}
+              className="mt-2.5 h-10 w-full font-body text-[11px] uppercase tracking-[.2em] text-dim hover:text-ink"
+            >
+              Discard session
+            </button>
+          ) : null}
         </Blueprint>
 
         <div className="mt-[34px] flex w-full border-y border-line">

@@ -1,7 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./lib/supabaseClient";
-import { loadActiveWorkout } from "./lib/activeWorkout";
+import {
+  type ActiveWorkout,
+  clearActiveWorkout,
+  loadActiveWorkout,
+  saveActiveWorkout,
+} from "./lib/activeWorkout";
 import type { Workout } from "./types";
 import AuthPage from "./components/Auth";
 import BottomNav, { type Tab } from "./components/BottomNav";
@@ -20,19 +25,36 @@ export default function App() {
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
   const [progressRefreshKey, setProgressRefreshKey] = useState(0);
   const [recent, setRecent] = useState<Workout[]>([]);
+  // The workout being logged, mirrored from localStorage. This is the only
+  // place that reads it; the logger reports changes through the setter below.
+  const [activeWorkout, setActiveWorkout] = useState<ActiveWorkout | null>(
+    null,
+  );
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
+      const saved = session ? loadActiveWorkout(session.user.id) : null;
       setSession(session);
+      setActiveWorkout(saved);
       // Straight back into a session that was live when the page was
       // reloaded (e.g. iOS evicting the app while the phone was locked).
-      if (session && loadActiveWorkout(session.user.id)) setLogging(true);
+      if (saved) setLogging(true);
       setLoading(false);
     });
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
+    } = supabase.auth.onAuthStateChange((_e, s) => {
+      setSession(s);
+      setActiveWorkout(s ? loadActiveWorkout(s.user.id) : null);
+    });
     return () => subscription.unsubscribe();
+  }, []);
+
+  // Stable, because the logger's save effect depends on it.
+  const updateActiveWorkout = useCallback((workout: ActiveWorkout | null) => {
+    if (workout) saveActiveWorkout(workout);
+    else clearActiveWorkout();
+    setActiveWorkout(workout);
   }, []);
 
   /* Home-screen stat strip. */
@@ -91,6 +113,8 @@ export default function App() {
           userId={session.user.id}
           logging={logging}
           setLogging={setLogging}
+          activeWorkout={activeWorkout}
+          onActiveWorkoutChange={updateActiveWorkout}
           onSignOut={() => supabase.auth.signOut()}
           stats={stats}
         />

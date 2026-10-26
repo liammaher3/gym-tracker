@@ -124,11 +124,14 @@ describe("HistoryTab", () => {
     setup();
     fireEvent.click(await screen.findByText("Pull day"));
     expect(await screen.findByRole("button", { name: "Edit workout" })).toBeInTheDocument();
-    expect(queriesFor("exercises", "select")).toHaveLength(1);
+    const loads = queriesFor("workouts", "select").filter((q) => q.single);
+    expect(loads.map((q) => filterValue(q, "eq", "id"))).toEqual(["w-today"]);
 
     fireEvent.click(screen.getByRole("button", { name: "History" }));
     expect(await screen.findByText("Pull day")).toBeInTheDocument();
-    await vi.waitFor(() => expect(queriesFor("workouts", "select")).toHaveLength(2));
+    await vi.waitFor(() =>
+      expect(queriesFor("workouts", "select").filter((q) => !q.single)).toHaveLength(2),
+    );
   });
 
   it("reloads when the refresh key changes", async () => {

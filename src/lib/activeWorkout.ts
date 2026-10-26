@@ -15,6 +15,12 @@ export type ActiveWorkout = {
 
 const KEY = "teretana.activeWorkout";
 
+/**
+ * A session older than this was abandoned rather than paused; it is dropped
+ * instead of reopening with a days-long clock. The workout stays in History.
+ */
+export const MAX_AGE_MS = 12 * 60 * 60 * 1000;
+
 /** The signed-in user's active workout, or null if there isn't one. */
 export function loadActiveWorkout(userId: string): ActiveWorkout | null {
   try {
@@ -24,9 +30,16 @@ export function loadActiveWorkout(userId: string): ActiveWorkout | null {
     if (
       saved?.userId !== userId ||
       typeof saved.workoutId !== "string" ||
-      typeof saved.startTime !== "number"
+      typeof saved.startTime !== "number" ||
+      typeof saved.name !== "string" ||
+      (saved.activeExerciseId !== null &&
+        typeof saved.activeExerciseId !== "string")
     )
       return null;
+    if (Date.now() - saved.startTime > MAX_AGE_MS) {
+      clearActiveWorkout();
+      return null;
+    }
     return saved;
   } catch {
     return null;

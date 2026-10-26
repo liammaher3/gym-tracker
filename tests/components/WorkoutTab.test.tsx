@@ -2,25 +2,32 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { resetSupabase } from "../helpers/supabase";
 import WorkoutTab from "../../src/components/WorkoutTab";
-import { saveActiveWorkout } from "../../src/lib/activeWorkout";
+import type { ActiveWorkout } from "../../src/lib/activeWorkout";
 
 vi.mock("../../src/lib/supabaseClient", async () => (await import("../helpers/supabase")).supabaseModule);
 
 type Stats = { thisWeek: number; daysSince: number | null; avgMinutes: number | null };
 
-function setup({ logging = false, stats }: { logging?: boolean; stats?: Stats } = {}) {
+function setup({
+  logging = false,
+  stats,
+  activeWorkout = null,
+}: { logging?: boolean; stats?: Stats; activeWorkout?: ActiveWorkout | null } = {}) {
   const setLogging = vi.fn();
+  const onActiveWorkoutChange = vi.fn();
   const onSignOut = vi.fn();
   render(
     <WorkoutTab
       userId="user-1"
       logging={logging}
       setLogging={setLogging}
+      activeWorkout={activeWorkout}
+      onActiveWorkoutChange={onActiveWorkoutChange}
       onSignOut={onSignOut}
       stats={stats}
     />,
   );
-  return { setLogging, onSignOut };
+  return { setLogging, onActiveWorkoutChange, onSignOut };
 }
 
 const stat = (label: string) => screen.getByText(label).previousElementSibling!;
@@ -85,11 +92,26 @@ describe("WorkoutTab", () => {
     });
   });
 
-  it("offers to resume a session that is still running", () => {
-    saveActiveWorkout({ userId: "user-1", workoutId: "w1", startTime: Date.now(), name: "", activeExerciseId: null });
-    const { setLogging } = setup();
-    expect(screen.getByText("Session running")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Resume workout" }));
-    expect(setLogging).toHaveBeenCalledExactlyOnceWith(true);
+  describe("with a session still running", () => {
+    const activeWorkout = { userId: "user-1", workoutId: "w1", startTime: Date.now(), name: "", activeExerciseId: null };
+
+    it("offers to resume it", () => {
+      const { setLogging } = setup({ activeWorkout });
+      expect(screen.getByText("Session running")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Resume workout" }));
+      expect(setLogging).toHaveBeenCalledExactlyOnceWith(true);
+    });
+
+    it("can discard it without opening the logger", () => {
+      const { setLogging, onActiveWorkoutChange } = setup({ activeWorkout });
+      fireEvent.click(screen.getByRole("button", { name: "Discard session" }));
+      expect(onActiveWorkoutChange).toHaveBeenCalledExactlyOnceWith(null);
+      expect(setLogging).not.toHaveBeenCalled();
+    });
+  });
+
+  it("offers no discard when nothing is running", () => {
+    setup();
+    expect(screen.queryByRole("button", { name: "Discard session" })).toBeNull();
   });
 });

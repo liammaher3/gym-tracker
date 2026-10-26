@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
-import type { Workout, Exercise, WorkoutSet } from "../types";
+import { fetchWorkoutWithExercises } from "../lib/workouts";
+import type { ExerciseWithSets, Workout } from "../types";
 import { Icon } from "./ui/Icons";
 
 type Props = {
   workout: Workout;
   onBack: () => void;
 };
-
-type ExerciseWithSets = Exercise & { sets: WorkoutSet[] };
 
 function formatDuration(seconds: number | null) {
   if (!seconds) return "—";
@@ -29,37 +28,11 @@ export default function WorkoutViewer({ workout, onBack }: Props) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const load = async () => {
-      const { data: exerciseData, error: exerciseError } = await supabase
-        .from("exercises")
-        .select("*")
-        .eq("workout_id", workout.id)
-        .order("created_at", { ascending: true });
-      if (exerciseError) {
-        console.error(exerciseError);
-        setLoading(false);
-        return;
-      }
-      const ids = (exerciseData ?? []).map((e) => e.id);
-      const { data: setData, error: setError } = await supabase
-        .from("sets")
-        .select("*")
-        .in("exercise_id", ids.length > 0 ? ids : [""])
-        .order("set_number", { ascending: true });
-      if (setError) {
-        console.error(setError);
-        setLoading(false);
-        return;
-      }
-      setExercises(
-        (exerciseData ?? []).map((ex) => ({
-          ...ex,
-          sets: (setData ?? []).filter((s) => s.exercise_id === ex.id),
-        })),
-      );
+    fetchWorkoutWithExercises(workout.id).then(({ data, error }) => {
+      if (error || !data) console.error(error);
+      else setExercises(data.exercises);
       setLoading(false);
-    };
-    load();
+    });
   }, [workout.id]);
 
   const deleteWorkout = async () => {
